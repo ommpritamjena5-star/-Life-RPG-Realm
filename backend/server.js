@@ -61,6 +61,6 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`⚔️ Life RPG Server running on port ${PORT} (http://localhost:${PORT})`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`⚔️ Life RPG Server running on port ${PORT} (http://localhost:${PORT} / http://127.0.0.1:${PORT})`);
 });
