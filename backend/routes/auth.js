@@ -8,10 +8,10 @@ const router = express.Router();
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, avatar, characterClass } = req.body;
+    const { name, email, phone, password, avatar, characterClass } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Please provide name, email, and password.' });
+    if (!name || !email || !password || !phone) {
+      return res.status(400).json({ error: 'Please provide name, email, mobile number, and password.' });
     }
 
     const existing = db.findUserByEmail(email);
@@ -25,6 +25,7 @@ router.post('/register', async (req, res) => {
     const newUser = db.createUser({
       name,
       email,
+      phone: phone.trim(),
       password: hashedPassword,
       avatar: avatar || '⚔️ Shadow Knight',
       characterClass: characterClass || 'Warrior',

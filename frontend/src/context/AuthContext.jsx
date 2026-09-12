@@ -54,11 +54,31 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
-  const register = async (name, email, password, avatar, characterClass) => {
+  const register = async (name, email, phone, password, avatar, characterClass) => {
+    // Handle both (name, email, phone, password...) and legacy arguments gracefully
+    let actualPhone = phone;
+    let actualPassword = password;
+    let actualAvatar = avatar;
+    let actualClass = characterClass;
+
+    if (arguments.length === 5) {
+      actualPhone = '9999999999';
+      actualPassword = arguments[2];
+      actualAvatar = arguments[3];
+      actualClass = arguments[4];
+    }
+
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, avatar, characterClass }),
+      body: JSON.stringify({
+        name,
+        email,
+        phone: actualPhone,
+        password: actualPassword,
+        avatar: actualAvatar,
+        characterClass: actualClass,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');
