@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { MobileNav } from './components/MobileNav';
@@ -17,6 +19,7 @@ import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ShopPage } from './pages/ShopPage';
 import { AchievementsPage } from './pages/AchievementsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { sound } from './utils/soundEngine';
 
 const AppContent = () => {
   const { user, loading, levelUpData, closeLevelUpModal } = useAuth();
@@ -69,6 +72,23 @@ const AppContent = () => {
   // First time login -> Show onboarding wizard
   const showOnboarding = user.settings?.onboardingCompleted === false;
 
+  const tabLabels = {
+    dashboard: 'Hero Dashboard',
+    quests: 'Quest Board',
+    schedule: 'Daily Schedule',
+    timer: 'Focus Sub-Sessions',
+    character: 'Character Sheet',
+    analytics: 'Analytics & Progression',
+    leaderboard: 'Hall of Heroes',
+    shop: 'Treasury & Rewards Bazaar',
+    settings: 'System & Profile Settings',
+  };
+
+  const handleBackToDashboard = () => {
+    sound.playClick();
+    setActiveTab('dashboard');
+  };
+
   return (
     <div className="min-h-screen rpg-background text-slate-100 flex flex-col justify-between pb-20 xl:pb-8">
       {/* Top Navbar HUD */}
@@ -80,28 +100,54 @@ const AppContent = () => {
 
       {/* Main App Content View Container */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            setActiveTab={setActiveTab}
-            onOpenNewQuest={() => {
-              setActiveTab('quests');
-              setNewQuestModalOpen(true);
-            }}
-          />
+        {/* Global Back Navigation Bar when in sub-pages */}
+        {activeTab !== 'dashboard' && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="mb-6 flex items-center justify-between p-3 rounded-2xl bg-purple-950/40 border border-purple-500/20 backdrop-blur-md"
+          >
+            <button
+              onClick={handleBackToDashboard}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-purple-500/30 text-purple-200 hover:text-white hover:border-amber-400/60 hover:bg-purple-900/50 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform text-amber-400" />
+              <span>Back to Dashboard</span>
+            </button>
+
+            <div className="text-xs font-rpg font-bold tracking-wider text-purple-300/80 uppercase hidden sm:block">
+              {tabLabels[activeTab] || 'Realm View'}
+            </div>
+          </motion.div>
         )}
-        {activeTab === 'quests' && (
-          <QuestsPage
-            isNewQuestModalOpen={newQuestModalOpen}
-            setIsNewQuestModalOpen={setNewQuestModalOpen}
-          />
-        )}
-        {activeTab === 'schedule' && <SchedulePage />}
-        {activeTab === 'timer' && <FocusTimerPage />}
-        {activeTab === 'character' && <CharacterPage />}
-        {activeTab === 'analytics' && <AnalyticsPage />}
-        {activeTab === 'leaderboard' && <LeaderboardPage />}
-        {activeTab === 'shop' && <ShopPage />}
-        {activeTab === 'settings' && <SettingsPage />}
+
+        <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <Dashboard
+              key="dashboard"
+              setActiveTab={setActiveTab}
+              onOpenNewQuest={() => {
+                setActiveTab('quests');
+                setNewQuestModalOpen(true);
+              }}
+            />
+          )}
+          {activeTab === 'quests' && (
+            <QuestsPage
+              key="quests"
+              isNewQuestModalOpen={newQuestModalOpen}
+              setIsNewQuestModalOpen={setNewQuestModalOpen}
+              onBack={handleBackToDashboard}
+            />
+          )}
+          {activeTab === 'schedule' && <SchedulePage key="schedule" onBack={handleBackToDashboard} />}
+          {activeTab === 'timer' && <FocusTimerPage key="timer" onBack={handleBackToDashboard} />}
+          {activeTab === 'character' && <CharacterPage key="character" onBack={handleBackToDashboard} />}
+          {activeTab === 'analytics' && <AnalyticsPage key="analytics" onBack={handleBackToDashboard} />}
+          {activeTab === 'leaderboard' && <LeaderboardPage key="leaderboard" onBack={handleBackToDashboard} />}
+          {activeTab === 'shop' && <ShopPage key="shop" onBack={handleBackToDashboard} />}
+          {activeTab === 'settings' && <SettingsPage key="settings" onBack={handleBackToDashboard} />}
+        </AnimatePresence>
       </main>
 
       {/* Mobile Bottom Navigation */}
