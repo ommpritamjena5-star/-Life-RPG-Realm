@@ -238,8 +238,30 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
               </div>
 
               {/* 3D Humanoid Character Model */}
-              <div className="relative my-2 flex items-center justify-center">
-                <Hero3DModel characterClass={characterClass} size={240} interactive={true} />
+              <div className="relative my-2 flex flex-col items-center justify-center">
+                <Hero3DModel characterClass={characterClass} size={230} interactive={true} />
+                
+                {/* Archetype Quick Switcher for 3D Model Inspection */}
+                <div className="flex items-center gap-1.5 mt-2 p-1 rounded-xl bg-slate-900/90 border border-purple-500/30">
+                  {Object.values(classDetails).map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        setCharacterClass(c.name);
+                      }}
+                      className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        characterClass === c.name
+                          ? 'bg-purple-600 text-amber-300 border border-amber-400 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>{c.icon}</span>
+                      <span className="text-[10px]">{c.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Class Attribute Radar Meters */}
