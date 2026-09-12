@@ -66,7 +66,7 @@ Traditional productivity apps and todo lists fail because they feel like chores.
 
 ```
 .
-├── client/                     # Vite + React Frontend
+├── frontend/                   # Vite + React Frontend
 │   ├── src/
 │   │   ├── components/         # Navbar, MobileNav, LevelUpModal, DailyReportModal
 │   │   ├── context/            # AuthContext & Progression Events
@@ -79,7 +79,7 @@ Traditional productivity apps and todo lists fail because they feel like chores.
 │   ├── vite.config.js          # Tailwind CSS & API Proxy
 │   └── package.json
 │
-├── server/                     # Node.js + Express Backend
+├── backend/                    # Node.js + Express Backend
 │   ├── config/                 # db.js (MongoDB Connection Adapter)
 │   ├── data/                   # storageEngine.js & seedData.js
 │   ├── middleware/             # auth.js (JWT Validation)
@@ -103,16 +103,16 @@ Traditional productivity apps and todo lists fail because they feel like chores.
 - **npm**: v9+
 
 ### 1. Installation
-Clone the repository and install all dependencies in root, server, and client:
+Clone the repository and install all dependencies in root, backend, and frontend:
 ```bash
 # In the root directory
 npm run install:all
 ```
 
 ### 2. Environment Configuration
-Copy `.env.example` to `server/.env`:
+Copy `.env.example` to `backend/.env`:
 ```bash
-cp server/.env.example server/.env
+cp backend/.env.example backend/.env
 ```
 
 ### 3. Launch Development Server
@@ -141,8 +141,8 @@ Visit **`http://localhost:5173`** in your browser to experience Life RPG!
 
 ## 🚢 Production Deployment
 
-- **Frontend**: Deploy `client/` to Vercel or Netlify.
-- **Backend**: Deploy `server/` to Render, Railway, or AWS.
+- **Frontend**: Deploy `frontend/` to Vercel or Netlify.
+- **Backend**: Deploy `backend/` to Render, Railway, or AWS.
 - **Database**: Connect to MongoDB Atlas by providing `MONGODB_URI` in environment variables.
 
 ---
