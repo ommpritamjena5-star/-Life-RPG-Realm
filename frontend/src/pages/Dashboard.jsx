@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sound } from '../utils/soundEngine';
+import { Hero3DModel } from '../components/Hero3DModel';
+import { CardTilt } from '../components/CardTilt';
 
 export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
   const { user, token, triggerProgressionEvent } = useAuth();
@@ -71,11 +73,9 @@ export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
       if (res.ok) {
         const data = await res.json();
         triggerProgressionEvent(data.progression);
-        // Refresh local quests state
         setQuests((prev) =>
           prev.map((q) => (q._id === questId || q.id === questId ? data.quest : q))
         );
-        // Refresh performance
         const perfRes = await fetch('/api/analytics/daily', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -92,121 +92,126 @@ export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
   if (!user) return null;
 
   const xpPercent = Math.min(100, Math.round((user.currentXp / (user.xpToNextLevel || 100)) * 100));
-  const activeQuests = quests.filter((q) => !q.isCompleted);
   const completedCount = quests.filter((q) => q.isCompleted).length;
 
   return (
     <div className="space-y-6">
-      {/* Hero Banner / Character Overview HUD */}
-      <div className="relative rounded-3xl p-6 sm:p-8 rpg-panel-glow border border-purple-500/40 overflow-hidden">
-        {/* Background glow flares */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Hero Banner / Character Overview HUD with 3D Model */}
+      <CardTilt maxAngle={6}>
+        <div className="relative rounded-3xl p-6 sm:p-8 rpg-panel-glow border-2 border-purple-500/40 overflow-hidden shadow-2xl">
+          {/* Background glow flares */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          {/* Left: Avatar & Title */}
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-700 p-[2px] shadow-xl shadow-purple-500/30">
-                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-3xl sm:text-4xl">
-                  {user.avatar ? user.avatar.split(' ')[0] : '⚔️'}
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Left: Avatar & 3D Mana Core */}
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-700 p-[2px] shadow-xl shadow-purple-500/30">
+                  <div className="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center text-3xl sm:text-4xl">
+                    {user.avatar ? user.avatar.split(' ')[0] : '⚔️'}
+                  </div>
+                </div>
+                <div className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-black text-xs shadow-md">
+                  L{user.level || 1}
                 </div>
               </div>
-              <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-black text-xs shadow-md">
-                L{user.level || 1}
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-rpg font-bold text-2xl sm:text-3xl text-slate-100 tracking-wide">
+                    {user.name}
+                  </h1>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-900/80 border border-purple-400/40 text-purple-200 font-semibold">
+                    {user.characterClass || 'Warrior'}
+                  </span>
+                </div>
+                <p className="text-xs text-amber-300 font-bold tracking-wide mt-1">
+                  ⭐ {user.title || 'Novice Adventurer'}
+                </p>
+
+                {/* Quick mini attributes row */}
+                <div className="flex flex-wrap gap-2 mt-3 text-[11px] font-semibold text-slate-300">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-900/90 border border-purple-500/20">
+                    INT: {user.attributes?.intellect || 10}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-slate-900/90 border border-purple-500/20">
+                    STR: {user.attributes?.strength || 10}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-slate-900/90 border border-purple-500/20">
+                    DISC: {user.attributes?.discipline || 10}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-rpg font-bold text-2xl sm:text-3xl text-slate-100 tracking-wide">
-                  {user.name}
-                </h1>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-900/60 border border-purple-400/40 text-purple-200 font-semibold">
-                  {user.characterClass || 'Warrior'}
-                </span>
-              </div>
-              <p className="text-xs text-amber-300 font-medium tracking-wide mt-1">
-                ⭐ {user.title || 'Novice Adventurer'}
-              </p>
-
-              {/* Quick mini attributes row */}
-              <div className="flex flex-wrap gap-2 mt-3 text-[11px] font-semibold text-slate-300">
-                <span className="px-2 py-0.5 rounded-md bg-slate-900/80 border border-purple-500/20">
-                  INT: {user.attributes?.intellect || 10}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-slate-900/80 border border-purple-500/20">
-                  STR: {user.attributes?.strength || 10}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-slate-900/80 border border-purple-500/20">
-                  DISC: {user.attributes?.discipline || 10}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: XP Progress & Treasury Status */}
-          <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[320px]">
-            {/* XP Progress Bar */}
-            <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-500/30">
-              <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
-                <span className="text-purple-300 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  Level {user.level || 1} Experience
-                </span>
-                <span className="text-slate-300">
-                  {user.currentXp} / {user.xpToNextLevel || 100} XP ({xpPercent}%)
-                </span>
-              </div>
-              <div className="relative w-full h-3 bg-slate-950 rounded-full overflow-hidden p-[1px] border border-purple-500/20">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-purple-500 via-indigo-400 to-cyan-400 rounded-full shimmer-bar"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${xpPercent}%` }}
-                  transition={{ duration: 0.6 }}
-                />
-              </div>
+            {/* Middle: 3D Mana Crystal Matrix in HUD */}
+            <div className="hidden xl:flex items-center justify-center">
+              <Hero3DModel characterClass={user.characterClass || 'Warrior'} size={140} interactive={true} />
             </div>
 
-            {/* Quick Metrics (Streak, Gold, Performance Score) */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 rounded-xl bg-orange-950/30 border border-orange-500/30 text-center">
-                <div className="text-[10px] text-orange-300 font-semibold flex items-center justify-center gap-1">
-                  <Flame className="w-3 h-3 text-orange-400" /> Streak
+            {/* Right: XP Progress & Treasury Status */}
+            <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[320px]">
+              {/* XP Progress Bar */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-500/30">
+                <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
+                  <span className="text-purple-300 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Level {user.level || 1} Experience
+                  </span>
+                  <span className="text-slate-300">
+                    {user.currentXp} / {user.xpToNextLevel || 100} XP ({xpPercent}%)
+                  </span>
                 </div>
-                <div className="font-rpg text-base font-bold text-orange-300 mt-0.5">{user.streak || 1} Days</div>
+                <div className="relative w-full h-3 bg-slate-950 rounded-full overflow-hidden p-[1px] border border-purple-500/20">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-purple-500 via-indigo-400 to-cyan-400 rounded-full shimmer-bar"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${xpPercent}%` }}
+                    transition={{ duration: 0.6 }}
+                  />
+                </div>
               </div>
 
-              <div
-                onClick={() => {
-                  sound.playClick();
-                  setActiveTab('shop');
-                }}
-                className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-center cursor-pointer hover:bg-amber-900/40 transition-colors"
-              >
-                <div className="text-[10px] text-amber-300 font-semibold flex items-center justify-center gap-1">
-                  <Coins className="w-3 h-3 text-amber-400" /> Gold
+              {/* Quick Metrics */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-2.5 rounded-xl bg-orange-950/40 border border-orange-500/30 text-center">
+                  <div className="text-[10px] text-orange-300 font-semibold flex items-center justify-center gap-1">
+                    <Flame className="w-3 h-3 text-orange-400" /> Streak
+                  </div>
+                  <div className="font-rpg text-base font-bold text-orange-300 mt-0.5">{user.streak || 1} Days</div>
                 </div>
-                <div className="font-rpg text-base font-bold text-amber-300 mt-0.5">{user.gold || 0}</div>
-              </div>
 
-              <div className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-center">
-                <div className="text-[10px] text-emerald-300 font-semibold flex items-center justify-center gap-1">
-                  <Activity className="w-3 h-3 text-emerald-400" /> Daily Score
+                <div
+                  onClick={() => {
+                    sound.playClick();
+                    setActiveTab('shop');
+                  }}
+                  className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-center cursor-pointer hover:bg-amber-900/40 transition-colors"
+                >
+                  <div className="text-[10px] text-amber-300 font-semibold flex items-center justify-center gap-1">
+                    <Coins className="w-3 h-3 text-amber-400" /> Gold
+                  </div>
+                  <div className="font-rpg text-base font-bold text-amber-300 mt-0.5">{user.gold || 0}</div>
                 </div>
-                <div className="font-rpg text-base font-bold text-emerald-300 mt-0.5">{performance.score}%</div>
+
+                <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-center">
+                  <div className="text-[10px] text-emerald-300 font-semibold flex items-center justify-center gap-1">
+                    <Activity className="w-3 h-3 text-emerald-400" /> Score
+                  </div>
+                  <div className="font-rpg text-base font-bold text-emerald-300 mt-0.5">{performance.score}%</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </CardTilt>
 
       {/* Main Grid: Quests & Time Planner Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Today's Quests & Focus Sessions */}
+        {/* Left 2 Cols: Today's Quests */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Daily Quests Header */}
-          <div className="rpg-panel rounded-3xl p-6 border border-purple-500/20">
+          <div className="rpg-panel rounded-3xl p-6 border border-purple-500/20 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-rpg font-bold text-lg text-slate-100 flex items-center gap-2">
@@ -238,7 +243,7 @@ export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
                     sound.playClick();
                     onOpenNewQuest();
                   }}
-                  className="mt-4 px-4 py-2 rounded-xl text-xs font-bold text-amber-300 bg-purple-950/80 border border-amber-400/40 hover:bg-purple-900/80"
+                  className="mt-4 px-4 py-2 rounded-xl text-xs font-bold text-amber-300 bg-purple-950/80 border border-amber-400/40 hover:bg-purple-900/80 cursor-pointer"
                 >
                   + Add Today's Goal
                 </button>
@@ -303,10 +308,9 @@ export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
           </div>
         </div>
 
-        {/* Right Col: Daily Schedule & Focus Action Launcher */}
+        {/* Right Col: Focus & Daily Timeline */}
         <div className="space-y-6">
-          {/* Quick Focus Session Widget */}
-          <div className="rpg-panel-gold rounded-3xl p-6 border border-amber-500/30">
+          <div className="rpg-panel-gold rounded-3xl p-6 border border-amber-500/30 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-rpg font-bold tracking-wider text-amber-400 uppercase flex items-center gap-1.5">
                 <Timer className="w-4 h-4 text-amber-400" /> Focus Sub-Session
@@ -329,8 +333,7 @@ export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
             </button>
           </div>
 
-          {/* Today's Schedule Timeline Preview */}
-          <div className="rpg-panel rounded-3xl p-6 border border-purple-500/20">
+          <div className="rpg-panel rounded-3xl p-6 border border-purple-500/20 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-rpg font-bold text-base text-slate-100 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-purple-400" /> Today's Timeline
@@ -340,7 +343,7 @@ export const Dashboard = ({ setActiveTab, onOpenNewQuest }) => {
                   sound.playClick();
                   setActiveTab('schedule');
                 }}
-                className="text-xs text-purple-300 hover:text-white font-medium"
+                className="text-xs text-purple-300 hover:text-white font-medium cursor-pointer"
               >
                 Plan Day →
               </button>

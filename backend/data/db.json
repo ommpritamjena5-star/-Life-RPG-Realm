@@ -1,0 +1,227 @@
+{
+  "users": [],
+  "quests": [],
+  "schedules": [],
+  "sessions": [],
+  "items": [
+    {
+      "id": "item-focus-elixir",
+      "name": "Elixir of Hyperfocus",
+      "description": "Grants +20% bonus XP on the next completed quest.",
+      "category": "potion",
+      "icon": "🧪",
+      "costGold": 40,
+      "rarity": "Common",
+      "effects": {
+        "xpBonusPercent": 20
+      },
+      "isCustom": false
+    },
+    {
+      "id": "item-streak-shield",
+      "name": "Aegis of Discipline",
+      "description": "Streak freeze shield that protects your streak if a day is missed.",
+      "category": "gear",
+      "icon": "🛡️",
+      "costGold": 75,
+      "rarity": "Rare",
+      "effects": {
+        "streakProtection": true
+      },
+      "isCustom": false
+    },
+    {
+      "id": "item-blade-focus",
+      "name": "Blade of the Code Archmage",
+      "description": "Cosmetic badge granting +5 permanent Intellect aura.",
+      "category": "gear",
+      "icon": "🗡️",
+      "costGold": 120,
+      "rarity": "Epic",
+      "effects": {
+        "statBonus": "intellect",
+        "statPoints": 5
+      },
+      "isCustom": false
+    },
+    {
+      "id": "item-cyber-theme",
+      "name": "Cyberpunk Neon Matrix Theme",
+      "description": "Unlocks the Cyberpunk Neon color theme for your HUD.",
+      "category": "theme",
+      "icon": "🌆",
+      "costGold": 100,
+      "rarity": "Epic",
+      "effects": {
+        "themeKey": "cyberpunk"
+      },
+      "isCustom": false
+    },
+    {
+      "id": "reward-gaming-hour",
+      "name": "1 Hour of Guilt-Free Gaming",
+      "description": "Real-life reward: Redeem 60 minutes of uninterrupted gaming session.",
+      "category": "custom_reward",
+      "icon": "🎮",
+      "costGold": 50,
+      "rarity": "Common",
+      "effects": {},
+      "isCustom": true
+    },
+    {
+      "id": "reward-cheat-meal",
+      "name": "Mythic Feast / Cheat Snack",
+      "description": "Real-life reward: Enjoy your favorite snack or dinner guilt-free.",
+      "category": "custom_reward",
+      "icon": "🍕",
+      "costGold": 80,
+      "rarity": "Rare",
+      "effects": {},
+      "isCustom": true
+    },
+    {
+      "id": "reward-movie-night",
+      "name": "Movie Night & Chill",
+      "description": "Real-life reward: Stream a full movie or episode spree after hard work.",
+      "category": "custom_reward",
+      "icon": "🍿",
+      "costGold": 90,
+      "rarity": "Epic",
+      "effects": {},
+      "isCustom": true
+    }
+  ],
+  "achievements": [
+    {
+      "code": "first_blood",
+      "title": "First Blood",
+      "description": "Complete your first ever quest.",
+      "icon": "⚔️",
+      "category": "Quests",
+      "xpReward": 50,
+      "goldReward": 25,
+      "condition": {
+        "type": "quests_completed",
+        "targetValue": 1
+      }
+    },
+    {
+      "code": "quest_adept",
+      "title": "Quest Adept",
+      "description": "Complete 10 real-world quests.",
+      "icon": "🛡️",
+      "category": "Quests",
+      "xpReward": 150,
+      "goldReward": 75,
+      "condition": {
+        "type": "quests_completed",
+        "targetValue": 10
+      }
+    },
+    {
+      "code": "quest_master",
+      "title": "Legendary Centurion",
+      "description": "Complete 50 real-world quests.",
+      "icon": "👑",
+      "category": "Quests",
+      "xpReward": 500,
+      "goldReward": 250,
+      "condition": {
+        "type": "quests_completed",
+        "targetValue": 50
+      }
+    },
+    {
+      "code": "streak_novice",
+      "title": "Spark of Discipline",
+      "description": "Maintain a 3-day consecutive streak.",
+      "icon": "🔥",
+      "category": "Streaks",
+      "xpReward": 100,
+      "goldReward": 50,
+      "condition": {
+        "type": "streak_days",
+        "targetValue": 3
+      }
+    },
+    {
+      "code": "streak_master",
+      "title": "Eternal Flame",
+      "description": "Maintain a 7-day consecutive streak.",
+      "icon": "⚡",
+      "category": "Streaks",
+      "xpReward": 300,
+      "goldReward": 150,
+      "condition": {
+        "type": "streak_days",
+        "targetValue": 7
+      }
+    },
+    {
+      "code": "focus_initiate",
+      "title": "Mind of Steel",
+      "description": "Complete 90 minutes of focused sub-sessions.",
+      "icon": "⏱️",
+      "category": "Focus",
+      "xpReward": 100,
+      "goldReward": 40,
+      "condition": {
+        "type": "focus_minutes",
+        "targetValue": 90
+      }
+    },
+    {
+      "code": "focus_grandmaster",
+      "title": "Hyperfocus Archmage",
+      "description": "Complete 300 minutes of focused sub-sessions.",
+      "icon": "🔮",
+      "category": "Focus",
+      "xpReward": 400,
+      "goldReward": 200,
+      "condition": {
+        "type": "focus_minutes",
+        "targetValue": 300
+      }
+    },
+    {
+      "code": "level_5",
+      "title": "Seasoned Hero",
+      "description": "Reach Character Level 5.",
+      "icon": "🌟",
+      "category": "Progression",
+      "xpReward": 200,
+      "goldReward": 100,
+      "condition": {
+        "type": "level_reached",
+        "targetValue": 5
+      }
+    },
+    {
+      "code": "level_10",
+      "title": "Ascended Titan",
+      "description": "Reach Character Level 10.",
+      "icon": "🌠",
+      "category": "Progression",
+      "xpReward": 600,
+      "goldReward": 300,
+      "condition": {
+        "type": "level_reached",
+        "targetValue": 10
+      }
+    },
+    {
+      "code": "gold_hoarder",
+      "title": "Dragon Hoard",
+      "description": "Accumulate 200 Gold in your treasury.",
+      "icon": "💰",
+      "category": "Economy",
+      "xpReward": 150,
+      "goldReward": 50,
+      "condition": {
+        "type": "gold_accumulated",
+        "targetValue": 200
+      }
+    }
+  ],
+  "userAchievements": []
+}
