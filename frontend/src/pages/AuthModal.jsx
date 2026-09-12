@@ -44,6 +44,14 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError('');
+      setSuccessMsg('');
+    }
+  }, [isOpen, initialMode]);
+
   if (!isOpen) return null;
 
   const classDetails = {

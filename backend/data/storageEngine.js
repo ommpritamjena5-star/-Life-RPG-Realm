@@ -59,7 +59,9 @@ class StorageEngine {
 
   // Users
   findUserByEmail(email) {
-    return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!email) return null;
+    const searchEmail = String(email).trim().toLowerCase();
+    return this.data.users.find((u) => u.email && String(u.email).trim().toLowerCase() === searchEmail);
   }
 
   findUserById(id) {

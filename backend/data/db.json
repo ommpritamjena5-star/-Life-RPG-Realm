@@ -1,5 +1,66 @@
 {
-  "users": [],
+  "users": [
+    {
+      "_id": "user_1789228984183_mx84hp",
+      "name": "Knight Test",
+      "email": "testhero@liferpg.io",
+      "phone": "+91 9876543210",
+      "password": "$2b$10$wU5wp.6ZV1ZDqtUMnPjz8u4quph4PGBkhga7UD7Dbi2Oq7eWl61om",
+      "avatar": "🌱 Novice Adventurer",
+      "characterClass": "Novice",
+      "level": 1,
+      "currentXp": 0,
+      "xpToNextLevel": 100,
+      "totalXpEarned": 0,
+      "gold": 100,
+      "streak": 1,
+      "lastActiveDate": "2026-09-12",
+      "streakHistory": [
+        {
+          "date": "2026-09-12",
+          "completed": true
+        }
+      ],
+      "attributes": {
+        "strength": 10,
+        "intellect": 10,
+        "vitality": 10,
+        "agility": 10,
+        "discipline": 10,
+        "charisma": 10
+      },
+      "dailyPerformance": {
+        "date": "2026-09-12",
+        "score": 100,
+        "totalScheduledMinutes": 0,
+        "completedMinutes": 0,
+        "questsCompleted": 0
+      },
+      "settings": {
+        "timezone": "UTC",
+        "wakeUpTime": "07:00",
+        "sleepTime": "23:00",
+        "defaultSessionDuration": 45,
+        "breakDuration": 15,
+        "remindersEnabled": true,
+        "soundEnabled": true,
+        "soundVolume": 70,
+        "animationIntensity": "high",
+        "theme": "fantasy-dark",
+        "leaderboardVisibility": true,
+        "favoriteContact": {
+          "name": "Mentor / Accountability Partner",
+          "email": "",
+          "phone": "",
+          "dailyReportEnabled": true
+        },
+        "onboardingCompleted": false
+      },
+      "inventory": [],
+      "createdAt": "2026-09-12T16:03:04.183Z",
+      "updatedAt": "2026-09-12T16:03:04.183Z"
+    }
+  ],
   "quests": [],
   "schedules": [],
   "sessions": [],

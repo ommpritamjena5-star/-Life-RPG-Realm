@@ -14,18 +14,22 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Please provide name, email, mobile number, and password.' });
     }
 
-    const existing = db.findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+    const cleanPhone = phone.trim();
+
+    const existing = db.findUserByEmail(cleanEmail);
     if (existing) {
-      return res.status(400).json({ error: 'User with this email already exists.' });
+      return res.status(400).json({ error: 'User with this email already exists. Please log in.' });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = db.createUser({
-      name,
-      email,
-      phone: phone.trim(),
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
       password: hashedPassword,
       avatar: avatar || '🌱 Novice Adventurer',
       characterClass: characterClass || 'Novice',
@@ -56,7 +60,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Please provide both email and password.' });
     }
 
-    const user = db.findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const user = db.findUserByEmail(cleanEmail);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
