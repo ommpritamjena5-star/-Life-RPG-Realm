@@ -1,0 +1,26 @@
+{
+  "name": "life-rpg",
+  "version": "1.0.0",
+  "description": "Life RPG - Turn Your Real Life Into an RPG Personal Operating System",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"magenta,cyan\" \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "start": "cd server && npm start",
+    "build": "cd client && npm run build",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": [
+    "rpg",
+    "gamification",
+    "productivity",
+    "life-operating-system",
+    "pomodoro",
+    "schedule"
+  ],
+  "author": "Life RPG Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
