@@ -247,17 +247,20 @@ router.post('/forgot-password', async (req, res) => {
       resetPasswordExpires: resetExpires,
     });
 
-    // Send Forgot Password Email (Non-blocking async)
-    sendForgotPasswordEmail({
-      to: user.email,
-      name: user.name,
-      resetCode,
-      expiresInMinutes: 15,
-    }).catch((err) => console.warn('[Email Warning]:', err.message));
+    // Send Forgot Password Email
+    try {
+      await sendForgotPasswordEmail({
+        to: user.email,
+        name: user.name,
+        resetCode,
+        expiresInMinutes: 15,
+      });
+    } catch (err) {
+      console.warn('[Email Warning]:', err.message);
+    }
 
     return res.json({
-      message: 'Recovery Rune dispatched to your email! Enter the 6-digit rune code to restore access.',
-      resetCode, // provided so user can test/reset seamlessly in all environments
+      message: `A 6-digit recovery code has been sent to ${user.email}. Please check your email inbox to verify.`,
       expiresInMinutes: 15,
     });
   } catch (error) {

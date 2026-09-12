@@ -37,8 +37,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
   // Forgot Password State
   const [forgotStep, setForgotStep] = useState(1);
   const [recoveryCode, setRecoveryCode] = useState('');
-  const [serverDispatchedCode, setServerDispatchedCode] = useState('');
-  const [codeCopied, setCodeCopied] = useState(false);
   
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -146,17 +144,19 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
         if (onComplete) onComplete();
       } else if (mode === 'forgot') {
         if (forgotStep === 1) {
+          if (!email.trim()) {
+            throw new Error('Please enter your email address to receive the recovery code.');
+          }
           const res = await fetch('/api/auth/forgot-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
+            body: JSON.stringify({ email: email.trim() }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Failed to dispatch recovery code');
 
-          setServerDispatchedCode(data.resetCode);
-          setRecoveryCode(data.resetCode);
-          setSuccessMsg('Recovery rune generated! Enter code below to reset password.');
+          setRecoveryCode('');
+          setSuccessMsg(data.message || `A 6-digit recovery code has been sent to ${email.trim()}. Please check your email inbox.`);
           setForgotStep(2);
         } else {
           if (password !== confirmPassword) {
@@ -431,40 +431,49 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     </div>
                   )}
 
-                  {/* Forgot Password Step 2 */}
+                  {/* Forgot Password Step 2: Verification */}
                   {mode === 'forgot' && forgotStep === 2 && (
                     <>
-                      {serverDispatchedCode && (
-                        <div className="p-2.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between">
-                          <div>
-                            <div className="text-[9px] text-amber-300 font-semibold uppercase">
-                              Dispatched Recovery Rune:
-                            </div>
-                            <div className="text-base font-mono font-black text-amber-300 tracking-widest">
-                              {serverDispatchedCode}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(serverDispatchedCode);
-                              setCodeCopied(true);
-                              sound.playClick();
-                              setTimeout(() => setCodeCopied(false), 2000);
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                          >
-                            <Copy className="w-3 h-3" />
-                            <span>{codeCopied ? 'Copied' : 'Copy'}</span>
-                          </button>
+                      <div className="p-3 rounded-2xl bg-purple-950/70 border border-purple-500/40 text-xs text-purple-200 flex items-start gap-2.5">
+                        <Mail className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-bold text-amber-300 mb-0.5">Verification Code Dispatched to Email</p>
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            We have sent a 6-digit Rune code to <span className="font-semibold text-white">{email}</span>. Please check your inbox (or spam folder), enter the code below, and set your new password.
+                          </p>
                         </div>
-                      )}
+                      </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
-                          <span>6-Digit Rune Code</span>
-                          <span className="text-[10px] text-amber-400 font-bold">* Required</span>
-                        </label>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                            <span>Enter 6-Digit Email Code</span>
+                            <span className="text-[10px] text-amber-400 font-bold">* Required</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              sound.playClick();
+                              setLoading(true);
+                              try {
+                                const res = await fetch('/api/auth/forgot-password', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email: email.trim() }),
+                                });
+                                const data = await res.json();
+                                setSuccessMsg(data.message || 'New recovery code dispatched to your email!');
+                              } catch (e) {
+                                setError('Failed to resend code.');
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                            className="text-[10px] text-amber-400 hover:text-amber-300 font-semibold cursor-pointer underline"
+                          >
+                            Resend Email Code
+                          </button>
+                        </div>
                         <div className="relative">
                           <KeyRound className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
                           <input
@@ -472,8 +481,8 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                             required
                             maxLength={6}
                             value={recoveryCode}
-                            onChange={(e) => setRecoveryCode(e.target.value)}
-                            placeholder="e.g. 849201"
+                            onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Enter 6-digit code from email"
                             className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-purple-500/30 font-mono tracking-widest text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                           />
                         </div>
