@@ -16,10 +16,11 @@ import {
   CheckCircle2,
   Copy,
   ArrowLeft,
+  RotateCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sound } from '../utils/soundEngine';
-import { Hero3DModel } from '../components/Hero3DModel';
+import { Character3DModel } from '../components/Character3DModel';
 
 export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplete }) => {
   const { login, register, updateUser } = useAuth();
@@ -33,7 +34,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
   const [avatar, setAvatar] = useState('⚔️ Shadow Knight');
   
   // Forgot Password State
-  const [forgotStep, setForgotStep] = useState(1); // 1 = Request Code, 2 = Enter Code & New Pass
+  const [forgotStep, setForgotStep] = useState(1);
   const [recoveryCode, setRecoveryCode] = useState('');
   const [serverDispatchedCode, setServerDispatchedCode] = useState('');
   const [codeCopied, setCodeCopied] = useState(false);
@@ -107,7 +108,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
         if (onComplete) onComplete();
       } else if (mode === 'forgot') {
         if (forgotStep === 1) {
-          // Request Code
           const res = await fetch('/api/auth/forgot-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -117,11 +117,10 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
           if (!res.ok) throw new Error(data.error || 'Failed to dispatch recovery code');
 
           setServerDispatchedCode(data.resetCode);
-          setRecoveryCode(data.resetCode); // Auto-populate for user convenience
+          setRecoveryCode(data.resetCode);
           setSuccessMsg('Recovery rune generated! Enter code below to reset password.');
           setForgotStep(2);
         } else {
-          // Reset Password
           if (password !== confirmPassword) {
             throw new Error('Passwords do not match. Please re-enter.');
           }
@@ -149,7 +148,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
     }
   };
 
-  // Instant Demo Login for judges/testers
   const handleInstantDemoLogin = async () => {
     setError('');
     setLoading(true);
@@ -173,7 +171,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
     }
   };
 
-  // Password strength helper
   const getPasswordStrength = () => {
     if (!password) return { label: 'Empty', percent: 0, color: 'bg-slate-700' };
     if (password.length < 6) return { label: 'Novice Shield', percent: 35, color: 'bg-rose-500' };
@@ -206,14 +203,17 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
 
           {/* Grid Container */}
           <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
-            {/* Left Column: 3D Holographic Character Awakening Portal */}
+            {/* Left Column: 3D Character Figurine Awakening Portal */}
             <div className="lg:col-span-5 p-6 sm:p-8 bg-gradient-to-b from-[#0e1124] to-[#080914] border-b lg:border-b-0 lg:border-r border-purple-500/20 flex flex-col justify-between relative overflow-hidden">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
               <div>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-rpg font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-400/40 text-purple-300">
-                    ✨ 3D Hero Awakening Portal
+                    ✨ 3D Character Model
+                  </span>
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <RotateCw className="w-3 h-3" /> Drag 360°
                   </span>
                 </div>
                 <h3 className="font-rpg text-xl font-black text-slate-100 uppercase tracking-wide">
@@ -226,13 +226,13 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                 </p>
               </div>
 
-              {/* 3D Model Artifact Display */}
-              <div className="relative my-4 flex items-center justify-center">
-                <Hero3DModel characterClass={characterClass} size={220} interactive={true} />
+              {/* 3D Character Model Display */}
+              <div className="relative my-2 flex items-center justify-center">
+                <Character3DModel characterClass={characterClass} size={230} interactive={true} />
               </div>
 
               {/* Class Attribute Radar Meters */}
-              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-purple-500/30 space-y-2">
+              <div className="p-3 rounded-2xl bg-slate-950/80 border border-purple-500/30 space-y-2">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center justify-between">
                   <span>Class Attribute Bias</span>
                   <span className="text-amber-400">Lv.1 Stats</span>
@@ -307,7 +307,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                   </div>
                 )}
 
-                {/* Instant Demo Login Button (in login or register mode) */}
+                {/* Instant Demo Login Button */}
                 {mode !== 'forgot' && (
                   <button
                     type="button"
@@ -342,8 +342,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                 )}
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-3.5">
-                  {/* Register Fields */}
+                <form onSubmit={handleSubmit} className="space-y-3">
                   {mode === 'register' && (
                     <>
                       <div>
@@ -365,7 +364,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
 
                       {/* Class Selection Cards */}
                       <div>
-                        <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
                           Choose Character Archetype
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -399,7 +398,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     </>
                   )}
 
-                  {/* Email Field (Always visible) */}
+                  {/* Email Field */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
                       Email Realm Address
@@ -420,7 +419,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                   {/* Forgot Password Step 2: Code & New Password */}
                   {mode === 'forgot' && forgotStep === 2 && (
                     <>
-                      {/* Generated Code Badge */}
                       {serverDispatchedCode && (
                         <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between">
                           <div>
@@ -501,7 +499,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     </>
                   )}
 
-                  {/* Standard Password Field (for Login and Register) */}
+                  {/* Standard Password Field */}
                   {mode !== 'forgot' && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -543,7 +541,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                         </button>
                       </div>
 
-                      {/* Password Shield Meter for register mode */}
                       {mode === 'register' && password && (
                         <div className="mt-2 space-y-1">
                           <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
