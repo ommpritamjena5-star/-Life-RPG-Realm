@@ -12,6 +12,7 @@ import leaderboardRoutes from './routes/leaderboard.js';
 import shopRoutes from './routes/shop.js';
 import achievementsRoutes from './routes/achievements.js';
 import settingsRoutes from './routes/settings.js';
+import chatRoutes from './routes/chat.js';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

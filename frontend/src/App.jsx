@@ -19,6 +19,7 @@ import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ShopPage } from './pages/ShopPage';
 import { AchievementsPage } from './pages/AchievementsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { OracleChatbot } from './components/OracleChatbot';
 import { sound } from './utils/soundEngine';
 
 const AppContent = () => {
@@ -65,6 +66,7 @@ const AppContent = () => {
           initialMode={authMode}
           onClose={() => setAuthModalOpen(false)}
         />
+        <OracleChatbot />
       </>
     );
   }
@@ -167,6 +169,9 @@ const AppContent = () => {
         isOpen={showOnboarding}
         onComplete={() => {}}
       />
+
+      {/* Oracle AI Companion Chatbot */}
+      <OracleChatbot />
     </div>
   );
 };
