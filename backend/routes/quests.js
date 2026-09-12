@@ -8,8 +8,10 @@ const router = express.Router();
 router.get('/', requireAuth, (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
+    // Automatically evaluate overdue tasks & inactivity penalties
+    const autoPenalties = db.checkAndApplySlothPenalties(userId);
     const quests = db.getQuests(userId, req.query);
-    return res.json({ quests });
+    return res.json({ quests, autoPenalties: autoPenalties || [] });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch quests.' });
   }
@@ -212,6 +214,73 @@ router.post('/:id/complete', requireAuth, (req, res) => {
   } catch (error) {
     console.error('Complete quest error:', error);
     return res.status(500).json({ error: 'Failed to complete quest.' });
+  }
+});
+
+// POST /api/quests/:id/skip (Sloth & Abandonment Penalty)
+router.post('/:id/skip', requireAuth, (req, res) => {
+  try {
+    const quest = db.getQuestById(req.params.id);
+    if (!quest) return res.status(404).json({ error: 'Quest not found.' });
+
+    const userId = req.user._id || req.user.id;
+    if (quest.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to abandon this quest.' });
+    }
+
+    if (quest.isCompleted) {
+      return res.status(400).json({ error: 'Completed quests cannot be skipped.' });
+    }
+
+    // Determine penalty based on quest difficulty
+    let xpLoss = 35;
+    let goldLoss = 15;
+    switch (quest.difficulty) {
+      case 'Easy':
+        xpLoss = 20;
+        goldLoss = 10;
+        break;
+      case 'Medium':
+        xpLoss = 40;
+        goldLoss = 15;
+        break;
+      case 'Hard':
+        xpLoss = 70;
+        goldLoss = 30;
+        break;
+      case 'Epic':
+        xpLoss = 120;
+        goldLoss = 60;
+        break;
+      default:
+        xpLoss = 35;
+        goldLoss = 15;
+    }
+
+    // Mark quest as failed/skipped
+    const updatedQuest = db.updateQuest(quest._id || quest.id, {
+      status: 'failed',
+      failedAt: new Date().toISOString(),
+      penaltyApplied: true,
+    });
+
+    // Execute penalty deduction
+    const penaltyResult = db.deductXpAndPenalize(
+      userId,
+      xpLoss,
+      goldLoss,
+      'discipline',
+      `Skipped Quest: "${quest.title}"`
+    );
+
+    return res.json({
+      message: `Quest skipped. Sloth Penalty: -${xpLoss} XP, -${goldLoss} Gold${penaltyResult.shieldUsed ? ' (Streak Protected by Aegis Shield!)' : ', Streak reduced by 1.'}`,
+      quest: updatedQuest,
+      penaltyResult,
+    });
+  } catch (error) {
+    console.error('Skip quest error:', error);
+    return res.status(500).json({ error: 'Failed to process quest penalty.' });
   }
 });
 

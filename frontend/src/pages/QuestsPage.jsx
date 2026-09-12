@@ -13,16 +13,22 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Skull,
+  AlertTriangle,
+  ShieldAlert,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sound } from '../utils/soundEngine';
 
 export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
-  const { user, token, triggerProgressionEvent } = useAuth();
+  const { user, token, triggerProgressionEvent, triggerPenaltyEvent } = useAuth();
   const [quests, setQuests] = useState([]);
   const [activeTier, setActiveTier] = useState('All');
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [penaltyAlert, setPenaltyAlert] = useState(null);
+  const [questToSkip, setQuestToSkip] = useState(null);
 
   // New Quest Form State
   const [title, setTitle] = useState('');
@@ -48,6 +54,15 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
       if (res.ok) {
         const data = await res.json();
         setQuests(data.quests || []);
+        if (data.autoPenalties && data.autoPenalties.length > 0) {
+          const totalXp = data.autoPenalties.reduce((acc, p) => acc + (p.xpLost || 0), 0);
+          setPenaltyAlert({
+            title: '⚠️ Sloth Penalties Incurred',
+            message: `You missed ${data.autoPenalties.length} overdue task(s). Total penalty: -${totalXp} XP and streak degradation applied!`,
+            penalties: data.autoPenalties,
+          });
+          sound.playPenalty();
+        }
       }
     } catch (e) {
       console.error('Failed to load quests:', e);
@@ -113,6 +128,33 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
       }
     } catch (e) {
       console.error('Complete quest error:', e);
+    }
+  };
+
+  const handleSkipQuest = async (quest) => {
+    sound.playPenalty();
+    try {
+      const questId = quest._id || quest.id;
+      const res = await fetch(`/api/quests/${questId}/skip`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        triggerPenaltyEvent(data.penaltyResult);
+        setQuests((prev) =>
+          prev.map((q) => (q._id === questId || q.id === questId ? data.quest : q))
+        );
+        setPenaltyAlert({
+          title: '💀 Sloth Penalty Applied',
+          message: data.message,
+          penalty: data.penaltyResult?.penalty,
+          shieldUsed: data.penaltyResult?.shieldUsed,
+        });
+        setQuestToSkip(null);
+      }
+    } catch (e) {
+      console.error('Skip quest error:', e);
     }
   };
 
@@ -205,6 +247,7 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredQuests.map((quest) => {
             const isDone = quest.isCompleted;
+            const isFailed = quest.status === 'failed';
             return (
               <motion.div
                 key={quest._id || quest.id}
@@ -212,15 +255,23 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
                 className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
                   isDone
                     ? 'bg-emerald-950/20 border-emerald-500/30 opacity-75'
+                    : isFailed
+                    ? 'bg-rose-950/20 border-rose-500/40 shadow-sm shadow-rose-950/40'
                     : 'rpg-panel hover:border-purple-400/50'
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-purple-950 text-purple-300 border border-purple-500/30">
-                        {quest.tier}
-                      </span>
+                      {isFailed ? (
+                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-rose-950 text-rose-300 border border-rose-500/40 flex items-center gap-1">
+                          <Skull className="w-3 h-3" /> FAILED / SKIPPED
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-purple-950 text-purple-300 border border-purple-500/30">
+                          {quest.tier}
+                        </span>
+                      )}
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-900 text-amber-300 border border-amber-500/30">
                         {quest.difficulty}
                       </span>
@@ -230,7 +281,7 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
                     </div>
                     <button
                       onClick={() => handleDeleteQuest(quest._id || quest.id)}
-                      className="text-slate-500 hover:text-rose-400 p-1 rounded-lg transition-colors"
+                      className="text-slate-500 hover:text-rose-400 p-1 rounded-lg transition-colors cursor-pointer"
                       title="Banish Quest"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -239,7 +290,11 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
 
                   <h3
                     className={`font-bold text-base mt-1 ${
-                      isDone ? 'line-through text-slate-400' : 'text-slate-100'
+                      isDone
+                        ? 'line-through text-slate-400'
+                        : isFailed
+                        ? 'text-rose-300'
+                        : 'text-slate-100'
                     }`}
                   >
                     {quest.title}
@@ -268,41 +323,164 @@ export const QuestsPage = ({ isNewQuestModalOpen, setIsNewQuestModalOpen }) => {
                   )}
                 </div>
 
-                {/* Footer with Rewards & Complete Button */}
+                {/* Footer with Rewards & Action Buttons */}
                 <div className="flex items-center justify-between mt-5 pt-3 border-t border-purple-500/10">
-                  <div className="flex items-center gap-3 text-xs font-bold">
-                    <span className="text-purple-300">+{quest.xpReward} XP</span>
-                    <span className="text-amber-400 flex items-center gap-1">
-                      <Coins className="w-3.5 h-3.5" /> +{quest.goldReward}
-                    </span>
-                    <span className="text-[10px] text-slate-400">+{quest.attributePoints} {quest.attributeBoost}</span>
-                  </div>
+                  {isFailed ? (
+                    <div className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-400" />
+                      <span>Sloth Penalty: XP & Gold Deducted • Streak Penalized</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 text-xs font-bold">
+                      <span className="text-purple-300">+{quest.xpReward} XP</span>
+                      <span className="text-amber-400 flex items-center gap-1">
+                        <Coins className="w-3.5 h-3.5" /> +{quest.goldReward}
+                      </span>
+                      <span className="text-[10px] text-slate-400">+{quest.attributePoints} {quest.attributeBoost}</span>
+                    </div>
+                  )}
 
-                  <button
-                    disabled={isDone}
-                    onClick={() => handleCompleteQuest(quest._id || quest.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      isDone
-                        ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 cursor-default'
-                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-sm shadow-purple-500/30'
-                    }`}
-                  >
-                    {isDone ? (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Completed
-                      </>
-                    ) : (
-                      <>
-                        <span>Claim Victory</span>
-                      </>
+                  <div className="flex items-center gap-2">
+                    {!isDone && !isFailed && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setQuestToSkip(quest);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-200 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1"
+                        title="Skip this quest and incur a sloth penalty"
+                      >
+                        <Skull className="w-3.5 h-3.5" />
+                        <span>Skip</span>
+                      </button>
                     )}
-                  </button>
+
+                    <button
+                      disabled={isDone || isFailed}
+                      onClick={() => handleCompleteQuest(quest._id || quest.id)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isDone
+                          ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 cursor-default'
+                          : isFailed
+                          ? 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-sm shadow-purple-500/30'
+                      }`}
+                    >
+                      {isDone ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+                        </>
+                      ) : isFailed ? (
+                        <>
+                          <Skull className="w-3.5 h-3.5" /> Failed
+                        </>
+                      ) : (
+                        <>
+                          <span>Claim Victory</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             );
           })}
         </div>
       )}
+
+      {/* Skip Quest Penalty Confirmation Modal */}
+      <AnimatePresence>
+        {questToSkip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-md w-full bg-slate-950 rounded-3xl p-6 sm:p-7 border-2 border-rose-500/50 shadow-2xl shadow-rose-950/50 text-center"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Skull className="w-8 h-8" />
+              </div>
+              <h2 className="font-rpg font-black text-xl text-slate-100 uppercase tracking-wide">
+                Abandon Quest & Face Penalty?
+              </h2>
+              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                Skipping <span className="font-bold text-amber-300">"{questToSkip.title}"</span> breaks your discipline and incurs an immediate RPG sloth penalty:
+              </p>
+
+              <div className="my-4 p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-left text-xs space-y-1.5 font-bold">
+                <div className="flex justify-between text-rose-300">
+                  <span>• XP Penalty:</span>
+                  <span>-{questToSkip.difficulty === 'Easy' ? 20 : questToSkip.difficulty === 'Hard' ? 70 : questToSkip.difficulty === 'Epic' ? 120 : 40} XP</span>
+                </div>
+                <div className="flex justify-between text-amber-400">
+                  <span>• Treasury Fine:</span>
+                  <span>-{questToSkip.difficulty === 'Easy' ? 10 : questToSkip.difficulty === 'Hard' ? 30 : questToSkip.difficulty === 'Epic' ? 60 : 15} Gold</span>
+                </div>
+                <div className="flex justify-between text-orange-300">
+                  <span>• Streak Penalty:</span>
+                  <span>-1 Active Streak Day (Unless Aegis Shield active)</span>
+                </div>
+                <div className="flex justify-between text-purple-300">
+                  <span>• Attribute Drain:</span>
+                  <span>-1 Discipline Point</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQuestToSkip(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-700 cursor-pointer"
+                >
+                  Keep Fighting
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSkipQuest(questToSkip)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-rpg font-bold text-white bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 shadow-lg shadow-rose-900/40 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Skull className="w-4 h-4" />
+                  <span>Accept Penalty & Skip</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Sloth / Inactivity Penalty Notification Alert Modal */}
+      <AnimatePresence>
+        {penaltyAlert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-md w-full bg-slate-950 rounded-3xl p-6 sm:p-7 border-2 border-amber-500/50 shadow-2xl shadow-amber-950/40 text-center"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-amber-950/80 border border-amber-500/50 text-amber-400 flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <AlertTriangle className="w-8 h-8 animate-pulse" />
+              </div>
+              <h2 className="font-rpg font-black text-xl text-slate-100 uppercase tracking-wide">
+                {penaltyAlert.title}
+              </h2>
+              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                {penaltyAlert.message}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setPenaltyAlert(null)}
+                className="mt-6 w-full py-2.5 rounded-xl text-xs font-rpg font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 shadow cursor-pointer"
+              >
+                I Will Redeem Myself
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* New Quest Modal */}
       <AnimatePresence>

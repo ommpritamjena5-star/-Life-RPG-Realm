@@ -19,7 +19,10 @@ const getTitleForLevel = (level) => {
 // GET /api/character
 router.get('/', requireAuth, (req, res) => {
   try {
-    const user = req.user;
+    const userId = req.user._id || req.user.id;
+    // Check and apply any pending sloth penalties from missed days or overdue quests
+    const penalties = db.checkAndApplySlothPenalties(userId);
+    const user = db.findUserById(userId) || req.user;
     const computedTitle = getTitleForLevel(user.level);
     
     // Check if title needs update
@@ -29,7 +32,7 @@ router.get('/', requireAuth, (req, res) => {
     }
 
     const { password: _, ...characterData } = user;
-    return res.json({ character: characterData });
+    return res.json({ character: characterData, penaltiesApplied: penalties || [] });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch character profile.' });
   }

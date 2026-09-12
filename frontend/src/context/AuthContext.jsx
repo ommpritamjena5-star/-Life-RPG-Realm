@@ -118,6 +118,16 @@ export const AuthProvider = ({ children }) => {
     setLevelUpData(null);
   };
 
+  const triggerPenaltyEvent = (penaltyResult) => {
+    if (!penaltyResult) return;
+    if (penaltyResult.user) {
+      setUser(penaltyResult.user);
+    } else {
+      fetchUser();
+    }
+    sound.playPenalty();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -128,9 +138,12 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         updateUser,
+        fetchUser,
         refreshUser: fetchUser,
         triggerProgressionEvent,
+        triggerPenaltyEvent,
         levelUpData,
+        setLevelUpData,
         closeLevelUpModal,
       }}
     >

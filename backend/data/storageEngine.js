@@ -206,6 +206,132 @@ class StorageEngine {
     };
   }
 
+  // Deduct XP, Gold, Discipline and reduce streak on task skip or inactivity
+  deductXpAndPenalize(userId, xpLoss = 30, goldLoss = 10, attributeLoss = 'discipline', reason = 'Skipped Quest') {
+    const user = this.findUserById(userId);
+    if (!user) return null;
+
+    let { currentXp, totalXpEarned, gold, attributes, streak, inventory } = user;
+    let shieldUsed = false;
+
+    // Check if user has an active Aegis Streak Shield that blocks streak penalty
+    const shieldIndex = inventory?.findIndex((item) => item.effects?.streakFreeze && !item.isConsumed);
+    if (shieldIndex !== undefined && shieldIndex !== -1) {
+      inventory[shieldIndex].isConsumed = true;
+      shieldUsed = true;
+    } else {
+      // Streak reduced by 1 (or reset to 0 if multiple days skipped)
+      streak = Math.max(0, (streak || 1) - 1);
+    }
+
+    // Deduct XP (cannot fall below 0)
+    const actualXpLoss = Math.min(currentXp, xpLoss);
+    currentXp = Math.max(0, currentXp - xpLoss);
+    totalXpEarned = Math.max(0, totalXpEarned - actualXpLoss);
+
+    // Deduct Gold (cannot fall below 0)
+    const actualGoldLoss = Math.min(gold, goldLoss);
+    gold = Math.max(0, gold - goldLoss);
+
+    // Minor discipline drain (min 5)
+    if (attributes && attributes[attributeLoss] && attributes[attributeLoss] > 5) {
+      attributes[attributeLoss] = Math.max(5, attributes[attributeLoss] - 1);
+    }
+
+    // Record penalty in user's penalty log
+    const penaltyRecord = {
+      id: 'pen_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      date: new Date().toISOString(),
+      reason,
+      xpLost: xpLoss,
+      goldLost: goldLoss,
+      streakLost: shieldUsed ? 0 : 1,
+      shieldUsed,
+    };
+
+    const penaltyLogs = user.penaltyLogs || [];
+    penaltyLogs.unshift(penaltyRecord);
+
+    const updated = this.updateUser(userId, {
+      currentXp,
+      totalXpEarned,
+      gold,
+      attributes,
+      streak,
+      inventory: inventory || [],
+      penaltyLogs: penaltyLogs.slice(0, 50), // keep recent 50 logs
+    });
+
+    return {
+      user: updated,
+      penalty: penaltyRecord,
+      shieldUsed,
+      xpLost: actualXpLoss,
+      goldLost: actualGoldLoss,
+      newStreak: streak,
+    };
+  }
+
+  // Automatic Inactivity & Overdue Task Decay Checker
+  checkAndApplySlothPenalties(userId) {
+    const user = this.findUserById(userId);
+    if (!user) return [];
+
+    const today = new Date().toISOString().split('T')[0];
+    const penaltiesApplied = [];
+
+    // 1. Check for skipped days of inactivity
+    if (user.lastActiveDate && user.lastActiveDate !== today) {
+      const lastDate = new Date(user.lastActiveDate);
+      const currentDate = new Date(today);
+      const diffTime = Math.abs(currentDate - lastDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 2) {
+        // Inactive for 2 or more days: Apply Sloth Inactivity Penalty
+        const daysSkipped = diffDays - 1;
+        const xpLoss = daysSkipped * 25;
+        const goldLoss = daysSkipped * 15;
+        const result = this.deductXpAndPenalize(
+          userId,
+          xpLoss,
+          goldLoss,
+          'discipline',
+          `Sloth Penalty: Inactive for ${diffDays} consecutive days`
+        );
+        if (result) penaltiesApplied.push(result.penalty);
+      }
+    }
+
+    // 2. Check for overdue uncompleted quests from previous days
+    const pendingPastQuests = this.data.quests.filter(
+      (q) => q.userId === userId && q.status === 'pending' && !q.isCompleted && q.scheduledDate < today
+    );
+
+    for (const q of pendingPastQuests) {
+      // Mark quest as failed
+      this.updateQuest(q._id || q.id, {
+        status: 'failed',
+        failedAt: new Date().toISOString(),
+        penaltyApplied: true,
+      });
+
+      const xpLoss = Math.round((q.xpReward || 50) * 0.5);
+      const goldLoss = Math.round((q.goldReward || 20) * 0.5);
+      const result = this.deductXpAndPenalize(
+        userId,
+        xpLoss,
+        goldLoss,
+        'discipline',
+        `Overdue Task: "${q.title}" was not completed in time`
+      );
+      if (result) penaltiesApplied.push(result.penalty);
+    }
+
+    return penaltiesApplied;
+  }
+
+
   // Quests
   getQuests(userId, query = {}) {
     let list = this.data.quests.filter((q) => q.userId === userId);

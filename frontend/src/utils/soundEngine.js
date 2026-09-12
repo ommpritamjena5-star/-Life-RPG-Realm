@@ -81,6 +81,36 @@ class SoundEngine {
     } catch (e) {}
   }
 
+  // Sloth / Task Skip Penalty Sound
+  playPenalty() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      const notes = [330, 293.66, 246.94, 196]; // E4, D4, B3, G3 (downward descent)
+      const now = this.ctx.currentTime;
+
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const start = now + idx * 0.1;
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, start);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.85, start + 0.35);
+
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(this.volume * 0.25, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(start);
+        osc.stop(start + 0.35);
+      });
+    } catch (e) {}
+  }
+
   // Grand Level-Up Fanfare
   playLevelUp() {
     if (!this.enabled) return;
