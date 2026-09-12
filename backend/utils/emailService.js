@@ -1,12 +1,30 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from backend directory and current working directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config();
 
 // Create transporter with environment config or fallback test transport
-let transporter = null;
+const getTransporter = () => {
+  const emailUser = process.env.EMAIL_USER?.trim();
+  const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, ''); // remove any accidental spaces in App Password
 
-const createTransporter = () => {
+  if (emailUser && emailPass) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+  }
+
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -14,26 +32,13 @@ const createTransporter = () => {
       secure: Number(process.env.SMTP_PORT) === 465,
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        pass: process.env.SMTP_PASS?.trim(),
       },
     });
   }
 
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  }
-
-  // Fallback: log to console & simulate delivery cleanly without crashing
   return null;
 };
-
-transporter = createTransporter();
 
 const getBaseStyles = () => `
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -102,12 +107,14 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
  * Universal Mail Dispatcher with Console Mock Fallback
  */
 export const dispatchEmail = async ({ to, subject, html, preheader }) => {
-  const from = process.env.EMAIL_FROM || '"Life RPG Oracle" <oracle@liferpg.realm>';
+  const from = process.env.EMAIL_FROM || '"Life RPG Realm" <rpg000life@gmail.com>';
   const fullHtml = wrapInTemplate({ title: subject, preheader, contentHtml: html });
+  const transporter = getTransporter();
 
   console.log(`\n================== 📧 [ASTRAL EMAIL DISPATCH] ==================`);
   console.log(`To: ${to}`);
   console.log(`Subject: ${subject}`);
+  console.log(`From: ${from}`);
   console.log(`Time: ${new Date().toISOString()}`);
 
   if (transporter) {

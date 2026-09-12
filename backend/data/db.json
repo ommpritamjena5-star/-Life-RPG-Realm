@@ -159,8 +159,10 @@
         }
       ],
       "createdAt": "2026-09-12T16:12:54.791Z",
-      "updatedAt": "2026-09-12T16:20:03.061Z",
-      "title": "Apprentice Pathfinder"
+      "updatedAt": "2026-09-12T16:35:08.363Z",
+      "title": "Apprentice Pathfinder",
+      "resetPasswordToken": "924108",
+      "resetPasswordExpires": "2026-09-12T16:50:08.363Z"
     }
   ],
   "quests": [
