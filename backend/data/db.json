@@ -59,11 +59,226 @@
       "inventory": [],
       "createdAt": "2026-09-12T16:03:04.183Z",
       "updatedAt": "2026-09-12T16:03:04.183Z"
+    },
+    {
+      "_id": "user_1789229574784_x4hb3i",
+      "name": "ABC",
+      "email": "ommjena25@gmail.com",
+      "phone": "9229625279",
+      "password": "$2b$10$aaLIcINhUQZjmUVAGlzose9Ok0Af9b8DnR8PgR2y6r5EOu3Lev5wW",
+      "avatar": "🌱 ABC",
+      "characterClass": "Mage",
+      "level": 3,
+      "currentXp": 9,
+      "xpToNextLevel": 519,
+      "totalXpEarned": 391,
+      "gold": 160,
+      "streak": 1,
+      "lastActiveDate": "2026-09-12",
+      "streakHistory": [
+        {
+          "date": "2026-09-12",
+          "completed": true
+        }
+      ],
+      "attributes": {
+        "strength": 15,
+        "intellect": 19,
+        "vitality": 12,
+        "agility": 12,
+        "discipline": 15,
+        "charisma": 12
+      },
+      "dailyPerformance": {
+        "date": "2026-09-12",
+        "score": 100,
+        "totalScheduledMinutes": 0,
+        "completedMinutes": 0,
+        "questsCompleted": 0
+      },
+      "settings": {
+        "timezone": "UTC",
+        "wakeUpTime": "07:00",
+        "sleepTime": "23:00",
+        "defaultSessionDuration": 45,
+        "breakDuration": 15,
+        "remindersEnabled": true,
+        "soundEnabled": true,
+        "soundVolume": 70,
+        "animationIntensity": "high",
+        "theme": "fantasy-dark",
+        "leaderboardVisibility": true,
+        "favoriteContact": {
+          "name": "Mentor / Accountability Partner",
+          "email": "",
+          "phone": "",
+          "dailyReportEnabled": true
+        },
+        "onboardingCompleted": true
+      },
+      "inventory": [
+        {
+          "itemId": "reward-movie-night",
+          "name": "Movie Night & Chill",
+          "category": "custom_reward",
+          "icon": "🍿",
+          "effects": {},
+          "purchasedAt": "2026-09-12T16:14:53.983Z",
+          "isEquipped": true,
+          "isConsumed": false
+        },
+        {
+          "itemId": "reward-movie-night",
+          "name": "Movie Night & Chill",
+          "category": "custom_reward",
+          "icon": "🍿",
+          "effects": {},
+          "purchasedAt": "2026-09-12T16:14:55.060Z",
+          "isEquipped": false,
+          "isConsumed": false
+        },
+        {
+          "itemId": "reward-movie-night",
+          "name": "Movie Night & Chill",
+          "category": "custom_reward",
+          "icon": "🍿",
+          "effects": {},
+          "purchasedAt": "2026-09-12T16:14:56.670Z",
+          "isEquipped": false,
+          "isConsumed": false
+        },
+        {
+          "itemId": "reward-movie-night",
+          "name": "Movie Night & Chill",
+          "category": "custom_reward",
+          "icon": "🍿",
+          "effects": {},
+          "purchasedAt": "2026-09-12T16:19:15.851Z",
+          "isEquipped": false,
+          "isConsumed": false
+        }
+      ],
+      "createdAt": "2026-09-12T16:12:54.791Z",
+      "updatedAt": "2026-09-12T16:20:03.061Z",
+      "title": "Apprentice Pathfinder"
     }
   ],
-  "quests": [],
+  "quests": [
+    {
+      "_id": "quest_1789229642620_idp636",
+      "userId": "user_1789229574784_x4hb3i",
+      "title": "Dawn of the Hero: Setup Daily Schedule",
+      "description": "Plan your wake-up, deep work, and rest time blocks in the Schedule hub.",
+      "category": "General",
+      "difficulty": "Easy",
+      "tier": "Main",
+      "xpReward": 50,
+      "goldReward": 25,
+      "durationMinutes": 15,
+      "attributeBoost": "discipline",
+      "attributePoints": 3,
+      "scheduledDate": "2026-09-12",
+      "isCompleted": true,
+      "status": "completed",
+      "subtasks": [],
+      "createdAt": "2026-09-12T16:14:02.620Z",
+      "updatedAt": "2026-09-12T16:14:32.228Z",
+      "completedAt": "2026-09-12T16:14:32.227Z"
+    },
+    {
+      "_id": "quest_1789229642626_beetnv",
+      "userId": "user_1789229574784_x4hb3i",
+      "title": "Study Session: Master New Skill",
+      "description": "Start a 45-minute focused sub-session using the RPG Focus Timer.",
+      "category": "Coding",
+      "difficulty": "Medium",
+      "tier": "Daily",
+      "xpReward": 75,
+      "goldReward": 35,
+      "durationMinutes": 45,
+      "attributeBoost": "intellect",
+      "attributePoints": 4,
+      "scheduledDate": "2026-09-12",
+      "isCompleted": true,
+      "status": "completed",
+      "subtasks": [],
+      "createdAt": "2026-09-12T16:14:02.628Z",
+      "updatedAt": "2026-09-12T16:14:35.965Z",
+      "completedAt": "2026-09-12T16:14:35.961Z"
+    },
+    {
+      "_id": "quest_1789229642630_urok4y",
+      "userId": "user_1789229574784_x4hb3i",
+      "title": "Physical Mastery: 20-Min Workout",
+      "description": "Complete physical exercise or stretching to boost Strength.",
+      "category": "Workout",
+      "difficulty": "Easy",
+      "tier": "Daily",
+      "xpReward": 50,
+      "goldReward": 20,
+      "durationMinutes": 20,
+      "attributeBoost": "strength",
+      "attributePoints": 3,
+      "scheduledDate": "2026-09-12",
+      "isCompleted": true,
+      "status": "completed",
+      "subtasks": [],
+      "createdAt": "2026-09-12T16:14:02.630Z",
+      "updatedAt": "2026-09-12T16:14:29.512Z",
+      "completedAt": "2026-09-12T16:14:29.512Z"
+    }
+  ],
   "schedules": [],
-  "sessions": [],
+  "sessions": [
+    {
+      "_id": "sess_1789229941056_k6f5dp",
+      "userId": "user_1789229574784_x4hb3i",
+      "questId": null,
+      "title": "Study JavaScript & DSA (Part 1/1)",
+      "category": "Coding",
+      "durationMinutes": 60,
+      "subSessionNumber": 1,
+      "totalSubSessions": 1,
+      "xpAwarded": 72,
+      "goldAwarded": 30,
+      "notes": "",
+      "date": "2026-09-12",
+      "completedAt": "2026-09-12T16:19:01.059Z",
+      "createdAt": "2026-09-12T16:19:01.060Z"
+    },
+    {
+      "_id": "sess_1789229944703_8168tm",
+      "userId": "user_1789229574784_x4hb3i",
+      "questId": null,
+      "title": "Study JavaScript & DSA (Part 1/1)",
+      "category": "Coding",
+      "durationMinutes": 60,
+      "subSessionNumber": 1,
+      "totalSubSessions": 1,
+      "xpAwarded": 72,
+      "goldAwarded": 30,
+      "notes": "",
+      "date": "2026-09-12",
+      "completedAt": "2026-09-12T16:19:04.704Z",
+      "createdAt": "2026-09-12T16:19:04.704Z"
+    },
+    {
+      "_id": "sess_1789229946114_o9pcao",
+      "userId": "user_1789229574784_x4hb3i",
+      "questId": null,
+      "title": "Study JavaScript & DSA (Part 1/1)",
+      "category": "Coding",
+      "durationMinutes": 60,
+      "subSessionNumber": 1,
+      "totalSubSessions": 1,
+      "xpAwarded": 72,
+      "goldAwarded": 30,
+      "notes": "",
+      "date": "2026-09-12",
+      "completedAt": "2026-09-12T16:19:06.115Z",
+      "createdAt": "2026-09-12T16:19:06.115Z"
+    }
+  ],
   "items": [
     {
       "id": "item-focus-elixir",
@@ -284,5 +499,27 @@
       }
     }
   ],
-  "userAchievements": []
+  "userAchievements": [
+    {
+      "_id": "uach_1789229669516_czxs37",
+      "userId": "user_1789229574784_x4hb3i",
+      "achievementCode": "first_blood",
+      "unlockedAt": "2026-09-12T16:14:29.516Z",
+      "isClaimed": true
+    },
+    {
+      "_id": "uach_1789229672229_dp93h8",
+      "userId": "user_1789229574784_x4hb3i",
+      "achievementCode": "gold_hoarder",
+      "unlockedAt": "2026-09-12T16:14:32.229Z",
+      "isClaimed": true
+    },
+    {
+      "_id": "uach_1789229944708_0f20z2",
+      "userId": "user_1789229574784_x4hb3i",
+      "achievementCode": "focus_initiate",
+      "unlockedAt": "2026-09-12T16:19:04.708Z",
+      "isClaimed": true
+    }
+  ]
 }

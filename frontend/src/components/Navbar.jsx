@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sword,
   Calendar,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Menu,
   X,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sound } from '../utils/soundEngine';
@@ -41,44 +42,45 @@ export const Navbar = ({ activeTab, setActiveTab, onOpenReport }) => {
     { id: 'quests', label: 'Quests', icon: Sword },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'timer', label: 'Focus Timer', icon: Timer },
-    { id: 'character', label: 'Character', icon: User },
+    { id: 'character', label: 'Hero Sheet', icon: User },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-    { id: 'shop', label: 'Shop', icon: ShoppingBag },
+    { id: 'shop', label: 'Bazaar', icon: ShoppingBag },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   const xpPercent = Math.min(100, Math.round((user.currentXp / (user.xpToNextLevel || 100)) * 100));
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-purple-500/20 bg-[#0b0c16]/90 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-40 w-full border-b border-purple-500/25 bg-[#07080e]/95 backdrop-blur-2xl shadow-xl shadow-black/60">
+      <div className="max-w-[1700px] mx-auto px-3 sm:px-5 lg:px-6">
+        <div className="flex items-center justify-between h-16 gap-2 lg:gap-4">
+          
           {/* Brand Logo */}
           <div
             onClick={() => {
               sound.playClick();
               setActiveTab('dashboard');
             }}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group flex-shrink-0 select-none"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-amber-500 p-[1px] shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center text-xl">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-600 p-[1px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center text-xl">
                 ⚔️
               </div>
             </div>
-            <div>
-              <span className="font-rpg font-bold text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-purple-300 to-cyan-300">
+            <div className="hidden sm:block">
+              <span className="font-rpg font-black text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-purple-200 to-cyan-300 drop-shadow-sm">
                 LIFE RPG
               </span>
-              <span className="hidden sm:block text-[10px] text-purple-400/80 font-medium tracking-widest uppercase">
+              <span className="block text-[9px] text-purple-400 font-bold uppercase tracking-widest leading-none">
                 Life OS
               </span>
             </div>
           </div>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden xl:flex items-center gap-1">
+          {/* Desktop Nav Links (Scrollable HUD strip so it never breaks text) */}
+          <nav className="hidden lg:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-1 rounded-2xl bg-slate-950/70 border border-purple-500/20 backdrop-blur-md">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -89,57 +91,63 @@ export const Navbar = ({ activeTab, setActiveTab, onOpenReport }) => {
                     sound.playClick();
                     setActiveTab(item.id);
                   }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-rpg font-bold tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer select-none ${
                     isActive
-                      ? 'bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm shadow-purple-500/30'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-amber-300 border border-amber-400/50 shadow-md shadow-purple-500/30 scale-[1.02]'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
-                  {item.label}
+                  <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-amber-300' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
           </nav>
 
-          {/* Character Stats HUD (XP, Gold, Streak) */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          {/* Character Stats HUD (XP, Gold, Streak, Tools) */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+            
             {/* Streak Counter */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-950/40 border border-orange-500/30 text-orange-400 text-xs font-bold shadow-sm shadow-orange-500/10">
-              <Flame className="w-4 h-4 text-orange-500 animate-pulse fill-orange-500/20" />
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-950/60 border border-orange-500/40 text-orange-300 text-xs font-black shadow-sm shadow-orange-500/20"
+              title="Consecutive Active Days"
+            >
+              <Flame className="w-4 h-4 text-orange-400 animate-pulse fill-orange-400" />
               <span>{user.streak || 1}d</span>
             </div>
 
-            {/* Gold Counter */}
-            <div
+            {/* Gold Treasury Counter */}
+            <button
+              type="button"
               onClick={() => {
                 sound.playClick();
                 setActiveTab('shop');
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs font-bold cursor-pointer hover:bg-amber-900/40 transition-colors shadow-sm shadow-amber-500/10"
-              title="Your Gold Treasury"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-black hover:bg-amber-900/60 hover:border-amber-400 transition-all cursor-pointer shadow-sm shadow-amber-500/20"
+              title="Treasury Vault (Click to visit Bazaar)"
             >
-              <Coins className="w-4 h-4 text-amber-400 fill-amber-400/20" />
+              <Coins className="w-4 h-4 text-amber-400 fill-amber-400/30" />
               <span>{user.gold || 0}</span>
-            </div>
+            </button>
 
-            {/* Character Level & XP Mini Bar */}
+            {/* Level & XP Mini Gauge */}
             <div
               onClick={() => {
                 sound.playClick();
                 setActiveTab('character');
               }}
-              className="hidden md:flex items-center gap-2.5 px-3 py-1 rounded-xl bg-purple-950/40 border border-purple-500/30 cursor-pointer hover:bg-purple-900/40 transition-all shadow-sm shadow-purple-500/10"
+              className="hidden sm:flex items-center gap-2.5 px-3 py-1 rounded-xl bg-purple-950/60 border border-purple-500/40 hover:border-purple-400 hover:bg-purple-900/50 cursor-pointer transition-all shadow-sm shadow-purple-500/20"
+              title="Hero Level & XP Progress"
             >
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-purple-600 text-[11px] font-extrabold text-slate-950 shadow">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-purple-600 text-[11px] font-black text-slate-950 shadow">
                 L{user.level || 1}
               </div>
-              <div className="w-24">
-                <div className="flex justify-between text-[10px] font-semibold text-purple-300 mb-0.5">
-                  <span>XP</span>
-                  <span>{xpPercent}%</span>
+              <div className="w-20 md:w-24">
+                <div className="flex justify-between text-[10px] font-bold text-purple-300 mb-0.5">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400">XP</span>
+                  <span className="text-amber-300 font-extrabold">{xpPercent}%</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-purple-500/20">
                   <motion.div
                     className="h-full bg-gradient-to-r from-purple-500 via-indigo-400 to-cyan-400 rounded-full"
                     initial={{ width: 0 }}
@@ -150,44 +158,55 @@ export const Navbar = ({ activeTab, setActiveTab, onOpenReport }) => {
               </div>
             </div>
 
-            {/* Daily Accountability Report Button */}
+            {/* Daily Accountability Report */}
             <button
+              type="button"
               onClick={() => {
                 sound.playClick();
                 onOpenReport();
               }}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 hover:text-white hover:bg-indigo-900/50 text-xs font-semibold transition-all shadow-sm"
-              title="Generate Daily Report for Accountability Partner"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-950/70 border border-indigo-500/40 text-indigo-200 hover:text-white hover:bg-indigo-900/70 text-xs font-bold transition-all shadow-sm cursor-pointer"
+              title="Accountability Report"
             >
               <Share2 className="w-3.5 h-3.5 text-indigo-400" />
               <span>Report</span>
             </button>
 
-            {/* Sound Toggle */}
+            {/* Sound FX Toggle */}
             <button
+              type="button"
               onClick={toggleSound}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800/60 transition-colors"
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                soundOn
+                  ? 'bg-purple-950/60 border-purple-500/40 text-amber-300 hover:bg-purple-900/60 shadow-sm'
+                  : 'bg-slate-900/80 border-slate-700 text-slate-500 hover:text-slate-300'
+              }`}
               title={soundOn ? 'Mute Sound FX' : 'Enable Sound FX'}
             >
-              {soundOn ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+              {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
 
-            {/* Logout Button */}
+            {/* Logout Exit Button */}
             <button
+              type="button"
               onClick={() => {
                 sound.playClick();
                 logout();
               }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/60 transition-colors"
-              title="Log Out"
+              className="p-2 rounded-xl bg-slate-900/80 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 transition-all cursor-pointer"
+              title="Log Out of Realm"
             >
               <LogOut className="w-4 h-4" />
             </button>
 
-            {/* Mobile Menu Toggle */}
+            {/* Mobile Hamburger Menu Toggle */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-1.5 rounded-lg text-slate-300 hover:bg-slate-800"
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setMobileMenuOpen(!mobileMenuOpen);
+              }}
+              className="lg:hidden p-2 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-amber-400 transition-colors cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -196,32 +215,54 @@ export const Navbar = ({ activeTab, setActiveTab, onOpenReport }) => {
       </div>
 
       {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="xl:hidden border-t border-purple-500/20 bg-slate-950/95 px-4 pt-2 pb-4 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  sound.playClick();
-                  setActiveTab(item.id);
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${
-                  isActive
-                    ? 'bg-purple-600/30 text-purple-200 border border-purple-500/40'
-                    : 'text-slate-300 hover:bg-slate-900'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden border-t border-purple-500/20 bg-[#07080e]/98 backdrop-blur-2xl px-4 pt-3 pb-5 space-y-1.5 shadow-2xl"
+          >
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      sound.playClick();
+                      setActiveTab(item.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-rpg font-bold tracking-wide transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-amber-300 border border-amber-400/50 shadow-md shadow-purple-500/30'
+                        : 'text-slate-300 hover:text-white bg-slate-900/80 border border-purple-500/20 hover:bg-purple-950/40'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-amber-300' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                onOpenReport();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 text-xs font-bold flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Share2 className="w-4 h-4 text-indigo-400" />
+              <span>Generate Daily Accountability Report</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 };
