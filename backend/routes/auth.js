@@ -1,6 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../data/storageEngine.js';
+import { User } from '../models/User.js';
+import { getDbStatus } from '../config/db.js';
 import { generateToken, requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -34,6 +36,22 @@ router.post('/register', async (req, res) => {
       avatar: avatar || '🌱 Novice Adventurer',
       characterClass: characterClass || 'Novice',
     });
+
+    // Save to MongoDB if connected
+    if (getDbStatus()) {
+      try {
+        await User.create({
+          name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          password: hashedPassword,
+          avatar: avatar || '🌱 Novice Adventurer',
+          characterClass: characterClass || 'Novice',
+        });
+      } catch (mongoErr) {
+        console.warn('[MongoDB] Sync note:', mongoErr.message);
+      }
+    }
 
     const token = generateToken(newUser);
 
