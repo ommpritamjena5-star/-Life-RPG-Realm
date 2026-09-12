@@ -27,8 +27,8 @@ router.post('/register', async (req, res) => {
       email,
       phone: phone.trim(),
       password: hashedPassword,
-      avatar: avatar || '⚔️ Shadow Knight',
-      characterClass: characterClass || 'Warrior',
+      avatar: avatar || '🌱 Novice Adventurer',
+      characterClass: characterClass || 'Novice',
     });
 
     const token = generateToken(newUser);

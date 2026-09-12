@@ -112,8 +112,8 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
           email,
           phone.trim(),
           password,
-          `${selectedClassInfo.icon} ${name || characterClass}`,
-          characterClass
+          `🌱 ${name || 'Novice Adventurer'}`,
+          'Novice'
         );
         onClose();
         if (onComplete) onComplete();
@@ -358,40 +358,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                             placeholder="e.g. Shadow Knight"
                             className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                           />
-                        </div>
-                      </div>
-
-                      {/* Class Selection Cards */}
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                          Choose Character Archetype
-                        </label>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {Object.values(classDetails).map((c) => (
-                            <div
-                              key={c.name}
-                              onClick={() => {
-                                sound.playClick();
-                                setCharacterClass(c.name);
-                              }}
-                              className={`p-1.5 rounded-xl border cursor-pointer transition-all flex items-center gap-2 ${
-                                characterClass === c.name
-                                  ? 'bg-purple-950/90 border-amber-400 shadow-md shadow-amber-500/10'
-                                  : 'bg-slate-900/60 border-slate-800 hover:border-purple-500/40 text-slate-400'
-                              }`}
-                            >
-                              <span className="text-base">{c.icon}</span>
-                              <div className="text-left">
-                                <div className="text-[11px] font-bold text-slate-200">{c.name}</div>
-                                <div className="text-[9px] text-amber-300/80">
-                                  {c.name === 'Warrior' && 'Strength'}
-                                  {c.name === 'Mage' && 'Intellect'}
-                                  {c.name === 'Rogue' && 'Agility'}
-                                  {c.name === 'Paladin' && 'Vitality'}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
                         </div>
                       </div>
                     </>

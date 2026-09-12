@@ -181,6 +181,31 @@ class StorageEngine {
       streakHistory.push({ date: today, completed: true });
     }
 
+    // Dynamic Character Archetype Evolution based on Real-World Progress & Dominant Attributes
+    let characterClass = user.characterClass || 'Novice';
+    let archetypeEvolved = false;
+
+    if (level >= 2 || totalXpEarned >= 80) {
+      const { strength = 10, intellect = 10, vitality = 10, agility = 10 } = attributes || {};
+      const maxAttr = Math.max(strength, intellect, vitality, agility);
+
+      let evolvedArchetype = characterClass;
+      if (maxAttr === strength && strength > 10) {
+        evolvedArchetype = 'Warrior';
+      } else if (maxAttr === intellect && intellect > 10) {
+        evolvedArchetype = 'Mage';
+      } else if (maxAttr === agility && agility > 10) {
+        evolvedArchetype = 'Rogue';
+      } else if (maxAttr === vitality && vitality > 10) {
+        evolvedArchetype = 'Paladin';
+      }
+
+      if (evolvedArchetype !== characterClass) {
+        characterClass = evolvedArchetype;
+        archetypeEvolved = true;
+      }
+    }
+
     const updated = this.updateUser(userId, {
       level,
       currentXp,
@@ -188,6 +213,7 @@ class StorageEngine {
       totalXpEarned,
       gold,
       attributes,
+      characterClass,
       streak,
       lastActiveDate: today,
       streakHistory,
@@ -201,6 +227,8 @@ class StorageEngine {
       leveledUp,
       levelsGained,
       newLevel: level,
+      characterClass,
+      archetypeEvolved,
       xpGained: xpGain,
       goldGained: goldGain,
     };
