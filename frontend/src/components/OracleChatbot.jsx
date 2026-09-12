@@ -90,10 +90,15 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
 
       if (res.ok) {
         const data = await res.json();
-        sound.playPurchase();
+        if (data.valid === false) {
+          sound.playLevelUp(); // subtle chime
+        } else {
+          sound.playPurchase();
+        }
         const oracleMsg = {
           id: 'oracle_' + Date.now(),
           sender: 'oracle',
+          isInvalid: data.valid === false,
           title: data.title || '🧙 Oracle Guidance',
           text: data.reply,
           suggestions: data.suggestions || [],
@@ -107,9 +112,10 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
       const errorMsg = {
         id: 'oracle_err_' + Date.now(),
         sender: 'oracle',
-        title: '⚠️ Astral Disturbance',
-        text: 'The arcane connection wavered. In short: Complete quests to earn XP/Gold, maintain daily streaks to avoid Sloth Penalties, and your Archetype will evolve dynamically!',
-        suggestions: ['How do I level up?', 'Tell me about Archetypes'],
+        isInvalid: true,
+        title: '⚠️ Please Write a Valid Question',
+        text: `I can only answer genuine questions regarding **Life RPG mechanics, Quests, Habit tracking, Focus sessions, Archetypes, Sloth Penalties, and XP formulas**.\n\nPlease ask a valid question such as one of the options below:`,
+        suggestions: ['⚔️ How do I level up fast?', '🧙 How do Archetypes unlock?', '💀 How do Sloth Penalties work?'],
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -269,9 +275,18 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
                 >
                   {/* Sender Badge */}
                   {msg.sender === 'oracle' && msg.title && (
-                    <div className="flex items-center gap-1.5 mb-1 px-2 text-[10px] font-rpg font-bold text-amber-400 uppercase tracking-wider">
-                      <Sparkles className="w-3 h-3 text-amber-400" />
-                      <span>{msg.title}</span>
+                    <div className="flex items-center gap-1.5 mb-1 px-2 text-[10px] font-rpg font-bold uppercase tracking-wider">
+                      {msg.isInvalid ? (
+                        <span className="text-amber-400 flex items-center gap-1">
+                          <span>⚠️</span>
+                          <span>{msg.title}</span>
+                        </span>
+                      ) : (
+                        <span className="text-purple-300 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>{msg.title}</span>
+                        </span>
+                      )}
                       <span className="text-slate-500 ml-auto font-normal lowercase">{msg.time}</span>
                     </div>
                   )}
@@ -281,6 +296,8 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
                     className={`max-w-[90%] p-3.5 rounded-2xl text-xs ${
                       msg.sender === 'user'
                         ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-tr-none shadow-md shadow-purple-500/20 border border-purple-400/40'
+                        : msg.isInvalid
+                        ? 'bg-rose-950/40 text-slate-200 rounded-tl-none border-2 border-rose-500/50 shadow-lg shadow-rose-950/30'
                         : 'bg-slate-900/90 text-slate-200 rounded-tl-none border border-purple-500/30 shadow-lg'
                     }`}
                   >
@@ -330,7 +347,7 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ask Aura anything about Life RPG..."
+                placeholder="Ask a valid question about Life RPG (XP, Archetypes, Focus...)"
                 className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-purple-500/30 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
               />
               <button
