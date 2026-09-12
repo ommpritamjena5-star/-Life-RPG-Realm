@@ -38,6 +38,15 @@ export const SettingsPage = () => {
   const [contactPhone, setContactPhone] = useState(current.favoriteContact?.phone || '');
   const [dailyReportEnabled, setDailyReportEnabled] = useState(current.favoriteContact?.dailyReportEnabled !== false);
 
+  // Email Notification Preferences
+  const [emailReminders, setEmailReminders] = useState(current.emailReminders !== false);
+  const [emailSecurityAlerts, setEmailSecurityAlerts] = useState(current.emailSecurityAlerts !== false);
+  const [emailAchievements, setEmailAchievements] = useState(current.emailAchievements !== false);
+
+  // Email test state
+  const [emailTestLoading, setEmailTestLoading] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
@@ -57,6 +66,9 @@ export const SettingsPage = () => {
       animationIntensity,
       theme,
       leaderboardVisibility,
+      emailReminders,
+      emailSecurityAlerts,
+      emailAchievements,
       favoriteContact: {
         name: contactName,
         email: contactEmail,
@@ -90,6 +102,51 @@ export const SettingsPage = () => {
     }
   };
 
+  const handleSendReminderNow = async () => {
+    setEmailTestLoading(true);
+    sound.playClick();
+    setEmailTestResult('');
+    try {
+      const res = await fetch('/api/settings/send-reminder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      sound.playPurchase();
+      setEmailTestResult(`✅ ${data.message}`);
+    } catch (err) {
+      setEmailTestResult('⚠️ Failed to dispatch reminder.');
+    } finally {
+      setEmailTestLoading(false);
+    }
+  };
+
+  const handleTestEmail = async (emailType) => {
+    setEmailTestLoading(true);
+    sound.playClick();
+    setEmailTestResult('');
+    try {
+      const res = await fetch('/api/settings/test-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ emailType }),
+      });
+      const data = await res.json();
+      sound.playPurchase();
+      setEmailTestResult(`✨ [${emailType.toUpperCase()}] email dispatched to ${user?.email || 'your address'}! Check terminal / inbox.`);
+    } catch (err) {
+      setEmailTestResult('⚠️ Failed to dispatch test email.');
+    } finally {
+      setEmailTestLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -100,7 +157,7 @@ export const SettingsPage = () => {
             System & Hero Settings
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Configure your daily battle rhythm, focus timers, accountability partner, and audio preferences.
+            Configure your battle rhythm, email notifications, accountability partner, and audio preferences.
           </p>
         </div>
 
@@ -210,7 +267,141 @@ export const SettingsPage = () => {
           </div>
         </div>
 
-        {/* Section 3: Favorite Contact / Accountability Partner */}
+        {/* Section 3: 📧 Astral Email Notifications & Testing Hub */}
+        <div className="rpg-panel rounded-3xl p-6 border-2 border-purple-500/30 space-y-4 bg-slate-950/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-rpg font-bold text-base text-slate-100 flex items-center gap-2">
+                <span>📧</span> Astral Email Dispatch & Notifications
+              </h3>
+              <p className="text-xs text-purple-300/80 mt-0.5">
+                Manage automated emails dispatched to <span className="text-amber-400 font-bold">{user?.email || 'your registered email'}</span>.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSendReminderNow}
+              disabled={emailTestLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-purple-900/80 hover:bg-purple-800 border border-purple-400/40 text-purple-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md self-start sm:self-auto disabled:opacity-50"
+            >
+              <span>⏰</span>
+              <span>Send Daily Reminder Now</span>
+            </button>
+          </div>
+
+          {emailTestResult && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 rounded-2xl bg-purple-950/60 border border-purple-400/40 text-xs text-amber-300 font-semibold"
+            >
+              {emailTestResult}
+            </motion.div>
+          )}
+
+          {/* Email Notification Toggles */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/90 border border-purple-500/20">
+              <div>
+                <div className="text-xs font-bold text-slate-200">Daily Quest Reminders</div>
+                <div className="text-[10px] text-slate-400">Streak alerts & pending tasks</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={emailReminders}
+                onChange={(e) => setEmailReminders(e.target.checked)}
+                className="w-4 h-4 accent-amber-400 cursor-pointer"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/90 border border-purple-500/20">
+              <div>
+                <div className="text-xs font-bold text-slate-200">Login Security Alerts</div>
+                <div className="text-[10px] text-slate-400">Notifies on account sign in</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={emailSecurityAlerts}
+                onChange={(e) => setEmailSecurityAlerts(e.target.checked)}
+                className="w-4 h-4 accent-amber-400 cursor-pointer"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/90 border border-purple-500/20">
+              <div>
+                <div className="text-xs font-bold text-slate-200">Achievement Milestones</div>
+                <div className="text-[10px] text-slate-400">Trophy & Level-up scrolls</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={emailAchievements}
+                onChange={(e) => setEmailAchievements(e.target.checked)}
+                className="w-4 h-4 accent-amber-400 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* Live Email Template Tester */}
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-purple-500/20 space-y-2.5">
+            <div className="text-[11px] font-rpg font-bold uppercase tracking-wider text-purple-300 flex items-center justify-between">
+              <span>🔮 Live Email Template Dispatch Tester</span>
+              <span className="text-[10px] text-slate-400 font-normal">Click any button to test delivery</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              <button
+                type="button"
+                onClick={() => handleTestEmail('welcome')}
+                disabled={emailTestLoading}
+                className="p-2 rounded-xl bg-slate-950 hover:bg-purple-950 border border-purple-500/30 hover:border-amber-400/50 text-[11px] font-bold text-slate-200 hover:text-amber-300 transition-all cursor-pointer text-center disabled:opacity-40"
+              >
+                🎉 Signup
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTestEmail('login')}
+                disabled={emailTestLoading}
+                className="p-2 rounded-xl bg-slate-950 hover:bg-purple-950 border border-purple-500/30 hover:border-amber-400/50 text-[11px] font-bold text-slate-200 hover:text-amber-300 transition-all cursor-pointer text-center disabled:opacity-40"
+              >
+                🛡️ Login Alert
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTestEmail('forgot-password')}
+                disabled={emailTestLoading}
+                className="p-2 rounded-xl bg-slate-950 hover:bg-purple-950 border border-purple-500/30 hover:border-amber-400/50 text-[11px] font-bold text-slate-200 hover:text-amber-300 transition-all cursor-pointer text-center disabled:opacity-40"
+              >
+                🔑 Reset Rune
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTestEmail('reminder')}
+                disabled={emailTestLoading}
+                className="p-2 rounded-xl bg-slate-950 hover:bg-purple-950 border border-purple-500/30 hover:border-amber-400/50 text-[11px] font-bold text-slate-200 hover:text-amber-300 transition-all cursor-pointer text-center disabled:opacity-40"
+              >
+                ⏰ Reminder
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTestEmail('achievement')}
+                disabled={emailTestLoading}
+                className="p-2 rounded-xl bg-slate-950 hover:bg-purple-950 border border-purple-500/30 hover:border-amber-400/50 text-[11px] font-bold text-slate-200 hover:text-amber-300 transition-all cursor-pointer text-center disabled:opacity-40"
+              >
+                🏆 Achievement
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTestEmail('levelup')}
+                disabled={emailTestLoading}
+                className="p-2 rounded-xl bg-slate-950 hover:bg-purple-950 border border-purple-500/30 hover:border-amber-400/50 text-[11px] font-bold text-slate-200 hover:text-amber-300 transition-all cursor-pointer text-center disabled:opacity-40"
+              >
+                ⚡ Level Up
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Favorite Contact / Accountability Partner */}
         <div className="rpg-panel-gold rounded-3xl p-6 border border-amber-500/30 space-y-4">
           <h3 className="font-rpg font-bold text-base text-slate-100 flex items-center gap-2">
             <Share2 className="w-4 h-4 text-amber-400" /> Favorite Contact (Accountability Partner)
@@ -255,7 +446,7 @@ export const SettingsPage = () => {
           </div>
         </div>
 
-        {/* Section 4: Audio, Visual & Leaderboard Privacy */}
+        {/* Section 5: Audio, Visual & Leaderboard Privacy */}
         <div className="rpg-panel rounded-3xl p-6 border border-purple-500/20 space-y-4">
           <h3 className="font-rpg font-bold text-base text-slate-100 flex items-center gap-2">
             <Volume2 className="w-4 h-4 text-indigo-400" /> Audio, Animations & Privacy
@@ -287,7 +478,7 @@ export const SettingsPage = () => {
               </select>
             </div>
 
-            {/* Leaderboard Visibility */}
+            {/* Leaderboard Privacy */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-900 border border-purple-500/20">
               <span className="text-xs font-semibold text-slate-200">Public Leaderboard</span>
               <input

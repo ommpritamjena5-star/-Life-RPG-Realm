@@ -4,6 +4,11 @@ import { db } from '../data/storageEngine.js';
 import { User } from '../models/User.js';
 import { getDbStatus } from '../config/db.js';
 import { generateToken, requireAuth } from '../middleware/auth.js';
+import {
+  sendWelcomeEmail,
+  sendLoginSuccessEmail,
+  sendForgotPasswordEmail,
+} from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -53,13 +58,20 @@ router.post('/register', async (req, res) => {
       }
     }
 
+    // Send Welcome Email (Non-blocking async)
+    sendWelcomeEmail({
+      to: cleanEmail,
+      name: cleanName,
+      characterClass: newUser.characterClass || 'Novice',
+    }).catch((err) => console.warn('[Email Warning]:', err.message));
+
     const token = generateToken(newUser);
 
     // Filter out password from response
     const { password: _, ...userData } = newUser;
 
     return res.status(201).json({
-      message: 'Adventurer registered successfully!',
+      message: 'Adventurer registered successfully! Welcome scroll dispatched to your email.',
       user: userData,
       token,
     });
@@ -89,11 +101,19 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
+    // Send Login Alert Email (Non-blocking async)
+    sendLoginSuccessEmail({
+      to: cleanEmail,
+      name: user.name,
+      ip: req.ip || req.headers['x-forwarded-for'] || 'Local Session',
+      time: new Date().toLocaleString(),
+    }).catch((err) => console.warn('[Email Warning]:', err.message));
+
     const token = generateToken(user);
     const { password: _, ...userData } = user;
 
     return res.json({
-      message: 'Welcome back, Adventurer!',
+      message: 'Welcome back, Adventurer! Login security alert dispatched.',
       user: userData,
       token,
     });
@@ -227,8 +247,16 @@ router.post('/forgot-password', async (req, res) => {
       resetPasswordExpires: resetExpires,
     });
 
+    // Send Forgot Password Email (Non-blocking async)
+    sendForgotPasswordEmail({
+      to: user.email,
+      name: user.name,
+      resetCode,
+      expiresInMinutes: 15,
+    }).catch((err) => console.warn('[Email Warning]:', err.message));
+
     return res.json({
-      message: 'Recovery Rune dispatched! Use this rune code to reset your password.',
+      message: 'Recovery Rune dispatched to your email! Enter the 6-digit rune code to restore access.',
       resetCode, // provided so user can test/reset seamlessly in all environments
       expiresInMinutes: 15,
     });

@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../data/storageEngine.js';
 import { requireAuth } from '../middleware/auth.js';
+import { sendAchievementEmail } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -28,7 +29,24 @@ router.get('/', requireAuth, (req, res) => {
 router.post('/check', requireAuth, (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
+    const user = req.user;
     const newlyUnlocked = db.checkUserAchievements(userId);
+
+    // Send emails for newly unlocked achievements
+    if (newlyUnlocked && newlyUnlocked.length > 0 && user?.email) {
+      newlyUnlocked.forEach((ach) => {
+        sendAchievementEmail({
+          to: user.email,
+          name: user.name,
+          achievementTitle: ach.title,
+          icon: ach.icon || '🏆',
+          description: ach.description,
+          xpReward: ach.xpReward || 100,
+          goldReward: ach.goldReward || 50,
+        }).catch((err) => console.warn('[Email Warning]:', err.message));
+      });
+    }
+
     return res.json({ newlyUnlocked });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to check achievements.' });
