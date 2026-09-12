@@ -21,6 +21,7 @@ export const ThreeCanvasBackground = ({ density = 'medium', interactive = true }
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     currentMount.appendChild(renderer.domElement);
 
     // 1. Starfield / Nebula Particles
