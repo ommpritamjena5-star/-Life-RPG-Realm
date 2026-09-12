@@ -100,19 +100,38 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
 
     try {
       if (mode === 'login') {
-        await login(email, password);
+        if (!email.trim() || !password) {
+          throw new Error('All fields are required. Please provide your Email and Password.');
+        }
+        await login(email.trim(), password);
         onClose();
         if (onComplete) onComplete();
       } else if (mode === 'register') {
-        if (!phone.trim()) {
-          throw new Error('Mobile number is compulsory for hero communication.');
+        if (!name.trim()) {
+          throw new Error('Hero Name is required.');
         }
+        if (!email.trim()) {
+          throw new Error('Email address is required.');
+        }
+        if (!phone.trim()) {
+          throw new Error('Mobile number is compulsory for hero alerts.');
+        }
+        if (!password) {
+          throw new Error('Password is required.');
+        }
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
+        }
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match. Please confirm your password.');
+        }
+
         await register(
-          name,
-          email,
+          name.trim(),
+          email.trim(),
           phone.trim(),
           password,
-          `🌱 ${name || 'Novice Adventurer'}`,
+          `🌱 ${name.trim() || 'Novice Adventurer'}`,
           'Novice'
         );
         onClose();
@@ -345,8 +364,9 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     <>
                       {/* Name */}
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5">
-                          Hero / Character Name
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
+                          <span>Hero / Character Name</span>
+                          <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                         </label>
                         <div className="relative">
                           <User className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
@@ -365,8 +385,9 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
 
                   {/* Email Field */}
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-0.5">
-                      Email Realm Address
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
+                      <span>Email Realm Address</span>
+                      <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
@@ -385,8 +406,8 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                   {mode === 'register' && (
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
-                        <span>Mobile Number (Compulsory)</span>
-                        <span className="text-[10px] text-amber-400 font-bold">* Required for Guild Alerts</span>
+                        <span>Mobile Number</span>
+                        <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                       </label>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
@@ -432,8 +453,9 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                       )}
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5">
-                          6-Digit Rune Code
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
+                          <span>6-Digit Rune Code</span>
+                          <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                         </label>
                         <div className="relative">
                           <KeyRound className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
@@ -450,8 +472,9 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5">
-                          New Password Rune
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
+                          <span>New Password Rune</span>
+                          <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                         </label>
                         <div className="relative">
                           <Lock className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
@@ -467,8 +490,9 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5">
-                          Confirm New Password Rune
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
+                          <span>Confirm New Password Rune</span>
+                          <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                         </label>
                         <div className="relative">
                           <Lock className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
@@ -489,8 +513,9 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                   {mode !== 'forgot' && (
                     <div>
                       <div className="flex items-center justify-between mb-0.5">
-                        <label className="text-[11px] font-semibold text-slate-300">
-                          Secret Password Rune
+                        <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                          <span>Secret Password Rune</span>
+                          <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                         </label>
                         {mode === 'login' && (
                           <button
@@ -515,7 +540,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
+                          placeholder="•••••••• (Min 6 chars)"
                           className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                         />
                         <button
@@ -542,6 +567,27 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Confirm Password Field for Registration */}
+                  {mode === 'register' && (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
+                        <span>Confirm Password Rune</span>
+                        <span className="text-[10px] text-amber-400 font-bold">* Required</span>
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Re-enter password"
+                          className="w-full pl-9 pr-9 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                        />
+                      </div>
                     </div>
                   )}
 
