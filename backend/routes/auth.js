@@ -224,18 +224,37 @@ router.post('/onboarding', requireAuth, (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-// Generates a 6-digit Rune Reset Code
+// Generates a 6-digit Rune Reset Code and sends it via email
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
+    if (!email || !email.trim()) {
       return res.status(400).json({ error: 'Please provide your email address.' });
     }
 
-    const user = db.findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    let user = db.findUserByEmail(cleanEmail);
+
+    if (!user && getDbStatus()) {
+      try {
+        const mongoUser = await User.findOne({ email: cleanEmail });
+        if (mongoUser) {
+          user = mongoUser.toObject();
+          if (!db.findUserById(user._id?.toString())) {
+            db.data.users.push(user);
+            db.saveToFile();
+          }
+        }
+      } catch (mongoErr) {
+        console.warn('[MongoDB findUser error]:', mongoErr.message);
+      }
+    }
+
     if (!user) {
-      return res.status(404).json({ error: 'No adventurer found with this email address.' });
+      return res.status(404).json({
+        error: `No adventurer account found with email "${cleanEmail}". Please check the spelling or Sign Up first!`,
+      });
     }
 
     // Generate 6-digit Rune Recovery Code
@@ -247,25 +266,37 @@ router.post('/forgot-password', async (req, res) => {
       resetPasswordExpires: resetExpires,
     });
 
+    if (getDbStatus()) {
+      try {
+        await User.updateOne(
+          { email: cleanEmail },
+          { resetPasswordToken: resetCode, resetPasswordExpires: resetExpires }
+        );
+      } catch (mongoErr) {
+        console.warn('[MongoDB update token note]:', mongoErr.message);
+      }
+    }
+
     // Send Forgot Password Email
     try {
       await sendForgotPasswordEmail({
-        to: user.email,
-        name: user.name,
+        to: cleanEmail,
+        name: user.name || 'Hero',
         resetCode,
         expiresInMinutes: 15,
       });
+      console.log(`[Forgot Password] Recovery rune code successfully dispatched to ${cleanEmail}`);
     } catch (err) {
       console.warn('[Email Warning]:', err.message);
     }
 
-    return res.json({
-      message: `A 6-digit recovery code has been sent to ${user.email}. Please check your email inbox to verify.`,
+    return res.status(200).json({
+      message: `A 6-digit recovery code has been dispatched to ${cleanEmail}. Please check your inbox or spam folder.`,
       expiresInMinutes: 15,
     });
   } catch (error) {
     console.error('Forgot password error:', error);
-    return res.status(500).json({ error: 'Failed to process password recovery.' });
+    return res.status(500).json({ error: 'Failed to process password recovery. Please try again.' });
   }
 });
 
@@ -283,13 +314,30 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
 
-    const user = db.findUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    let user = db.findUserByEmail(cleanEmail);
+
+    if (!user && getDbStatus()) {
+      try {
+        const mongoUser = await User.findOne({ email: cleanEmail });
+        if (mongoUser) {
+          user = mongoUser.toObject();
+          if (!db.findUserById(user._id?.toString())) {
+            db.data.users.push(user);
+            db.saveToFile();
+          }
+        }
+      } catch (mongoErr) {
+        console.warn('[MongoDB findUser error]:', mongoErr.message);
+      }
+    }
+
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    if (!user.resetPasswordToken || user.resetPasswordToken !== code.trim()) {
-      return res.status(400).json({ error: 'Invalid recovery rune code. Please try again.' });
+    if (!user.resetPasswordToken || user.resetPasswordToken.trim() !== String(code).trim()) {
+      return res.status(400).json({ error: 'Invalid recovery rune code. Please enter the exact 6 digits sent to your email.' });
     }
 
     if (user.resetPasswordExpires && new Date() > new Date(user.resetPasswordExpires)) {
@@ -304,6 +352,17 @@ router.post('/reset-password', async (req, res) => {
       resetPasswordToken: null,
       resetPasswordExpires: null,
     });
+
+    if (getDbStatus()) {
+      try {
+        await User.updateOne(
+          { email: cleanEmail },
+          { password: hashedPassword, resetPasswordToken: null, resetPasswordExpires: null }
+        );
+      } catch (mongoErr) {
+        console.warn('[MongoDB password update note]:', mongoErr.message);
+      }
+    }
 
     const token = generateToken(updatedUser);
     const { password: _, ...userData } = updatedUser;

@@ -152,23 +152,46 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.trim() }),
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to dispatch recovery code');
+          let data = null;
+          try {
+            data = await res.json();
+          } catch (jsonErr) {
+            // response was not JSON
+          }
+          if (!res.ok) {
+            throw new Error(data?.error || `Unable to send recovery code (Status: ${res.status}). Please check your connection.`);
+          }
 
           setRecoveryCode('');
           setSuccessMsg(data.message || `A 6-digit recovery code has been sent to ${email.trim()}. Please check your email inbox.`);
           setForgotStep(2);
         } else {
+          if (!recoveryCode.trim()) {
+            throw new Error('Please enter the 6-digit Rune code sent to your email.');
+          }
+          if (!password) {
+            throw new Error('Please enter your new password.');
+          }
+          if (password.length < 6) {
+            throw new Error('Password must be at least 6 characters long.');
+          }
           if (password !== confirmPassword) {
             throw new Error('Passwords do not match. Please re-enter.');
           }
           const res = await fetch('/api/auth/reset-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, code: recoveryCode, newPassword: password }),
+            body: JSON.stringify({ email: email.trim(), code: recoveryCode.trim(), newPassword: password }),
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+          let data = null;
+          try {
+            data = await res.json();
+          } catch (jsonErr) {
+            // response was not JSON
+          }
+          if (!res.ok) {
+            throw new Error(data?.error || `Failed to reset password (Status: ${res.status}). Please verify the 6-digit code.`);
+          }
 
           sound.playLevelUp();
           setSuccessMsg('Password successfully restored! Redirecting to login...');
