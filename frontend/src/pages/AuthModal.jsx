@@ -159,29 +159,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
     }
   };
 
-  const handleInstantDemoLogin = async () => {
-    setError('');
-    setLoading(true);
-    sound.playClick();
-    try {
-      const demoEmail = 'shadow.knight@liferpg.io';
-      const demoPass = 'hero12345';
-
-      try {
-        await login(demoEmail, demoPass);
-      } catch (loginErr) {
-        await register('Shadow Knight', demoEmail, '+1234567890', demoPass, '⚔️ Shadow Knight', 'Warrior');
-      }
-
-      onClose();
-      if (onComplete) onComplete();
-    } catch (e) {
-      setError('Could not connect demo session.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getPasswordStrength = () => {
     if (!password) return { label: 'Empty', percent: 0, color: 'bg-slate-700' };
     if (password.length < 6) return { label: 'Novice Shield', percent: 35, color: 'bg-rose-500' };
@@ -338,18 +315,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                       Password Restoration
                     </span>
                   </div>
-                )}
-
-                {/* Instant Demo Login Button */}
-                {mode !== 'forgot' && (
-                  <button
-                    type="button"
-                    onClick={handleInstantDemoLogin}
-                    className="w-full mb-3 py-2 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-                  >
-                    <Zap className="w-4 h-4 text-amber-400 fill-amber-400 animate-pulse" />
-                    <span>⚡ Quick Demo Login: Instant Hero Access</span>
-                  </button>
                 )}
 
                 {error && (

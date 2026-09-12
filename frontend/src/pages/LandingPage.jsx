@@ -199,9 +199,9 @@ export const LandingPage = ({ onStartJourney, onLogin }) => {
                   sound.playClick();
                   onLogin();
                 }}
-                className="w-full sm:w-auto px-7 py-4 rounded-2xl font-semibold text-xs text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-purple-500/30 transition-all cursor-pointer"
+                className="w-full sm:w-auto px-7 py-4 rounded-2xl font-semibold text-xs text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-purple-500/30 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                ⚡ Instant Demo Login
+                <span>🔑 Sign In to Realm</span>
               </button>
             </motion.div>
           </div>
