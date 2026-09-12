@@ -14,7 +14,7 @@ import {
   Shield,
   Zap,
   CheckCircle2,
-  Play,
+  RotateCw,
 } from 'lucide-react';
 import { sound } from '../utils/soundEngine';
 import { Hero3DModel } from '../components/Hero3DModel';
@@ -26,6 +26,13 @@ export const LandingPage = ({ onStartJourney, onLogin }) => {
   const [demoXp, setDemoXp] = useState(65);
   const [demoGold, setDemoGold] = useState(120);
   const [activeHeroClass, setActiveHeroClass] = useState('Warrior');
+
+  const classDescriptions = {
+    Warrior: 'Vanguard Titan wielding heavy plate armor, greatsword, and tower shield.',
+    Mage: 'Arcane Archmage channeling glowing crystal staffs and orbital spellcraft.',
+    Rogue: 'Shadow Phantom specializing in stealth agility and dual shadow daggers.',
+    Paladin: 'Solar Guardian protected by radiant plate, warhammer, and a solar halo.',
+  };
 
   const handleDemoComplete = () => {
     if (demoQuestCompleted) return;
@@ -133,7 +140,7 @@ export const LandingPage = ({ onStartJourney, onLogin }) => {
 
       {/* Hero Section */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           {/* Left Column: Hero Text */}
           <div className="lg:col-span-7 text-center lg:text-left">
             <motion.div
@@ -199,41 +206,51 @@ export const LandingPage = ({ onStartJourney, onLogin }) => {
             </motion.div>
           </div>
 
-          {/* Right Column: Interactive 3D Hero Artifact & Class Switcher */}
+          {/* Right Column: 3D Human-Like Character Model & Class Switcher */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <CardTilt maxAngle={15} className="w-full">
-              <div className="rpg-panel-glow rounded-3xl p-6 sm:p-8 border-2 border-purple-500/40 text-center relative overflow-hidden shadow-2xl">
-                <div className="flex items-center justify-between mb-4">
+            <CardTilt maxAngle={12} className="w-full">
+              <div className="rpg-panel-glow rounded-3xl p-6 sm:p-7 border-2 border-purple-500/40 text-center relative overflow-hidden shadow-2xl">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-rpg font-bold tracking-wider text-amber-400 uppercase flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" /> 3D Hero Artifact
+                    <Sparkles className="w-3.5 h-3.5" /> 3D Hero Model
                   </span>
-                  <div className="flex gap-1.5">
-                    {['Warrior', 'Mage', 'Rogue', 'Paladin'].map((cls) => (
-                      <button
-                        key={cls}
-                        onClick={() => {
-                          sound.playClick();
-                          setActiveHeroClass(cls);
-                        }}
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                          activeHeroClass === cls
-                            ? 'bg-amber-400 text-slate-950'
-                            : 'bg-slate-900 text-slate-400 border border-purple-500/20'
-                        }`}
-                      >
-                        {cls}
-                      </button>
-                    ))}
-                  </div>
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <RotateCw className="w-3 h-3" /> Drag 360°
+                  </span>
                 </div>
 
-                {/* 3D Model Instance */}
-                <div className="my-2 flex justify-center">
-                  <Hero3DModel characterClass={activeHeroClass} size={240} interactive={true} />
+                {/* Class Selector Tabs */}
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {['Warrior', 'Mage', 'Rogue', 'Paladin'].map((cls) => (
+                    <button
+                      key={cls}
+                      onClick={() => {
+                        sound.playClick();
+                        setActiveHeroClass(cls);
+                      }}
+                      className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        activeHeroClass === cls
+                          ? 'bg-amber-400 text-slate-950 shadow-md'
+                          : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-purple-500/20'
+                      }`}
+                    >
+                      {cls === 'Warrior' && '⚔️ '}
+                      {cls === 'Mage' && '🔮 '}
+                      {cls === 'Rogue' && '🗡️ '}
+                      {cls === 'Paladin' && '🛡️ '}
+                      {cls}
+                    </button>
+                  ))}
                 </div>
 
-                <p className="text-xs text-slate-400 mt-2">
-                  Drag with cursor to tilt the 3D crystal matrix in real-time.
+                {/* 3D Humanoid Model */}
+                <div className="my-1 flex justify-center">
+                  <Hero3DModel characterClass={activeHeroClass} size={270} interactive={true} />
+                </div>
+
+                {/* Class Description */}
+                <p className="text-xs text-slate-300 mt-2 font-medium px-2">
+                  {classDescriptions[activeHeroClass]}
                 </p>
               </div>
             </CardTilt>
