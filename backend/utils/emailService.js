@@ -181,7 +181,7 @@ export const sendWelcomeEmail = async ({ to, name, characterClass = 'Novice' }) 
 /**
  * 2. 🔐 Login Success (Security Notification)
  */
-export const sendLoginSuccessEmail = async ({ to, name, ip = 'Local Session', time = new Date().toLocaleString() }) => {
+export const sendLoginSuccessEmail = async ({ to, name, time = new Date().toLocaleString() }) => {
   const html = `
     <div style="margin-bottom: 20px;">
       <h2 style="color: #f8fafc; font-size: 18px; font-weight: 800; margin: 0 0 8px 0;">
@@ -203,21 +203,24 @@ export const sendLoginSuccessEmail = async ({ to, name, ip = 'Local Session', ti
           <td style="padding: 6px 0; font-weight: bold; color: #38bdf8;">${time}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #94a3b8;">Location / IP:</td>
-          <td style="padding: 6px 0; font-weight: bold; color: #c084fc;">${ip}</td>
+          <td style="padding: 6px 0; color: #94a3b8;">Session:</td>
+          <td style="padding: 6px 0; font-weight: bold; color: #34d399;">Active Hero Session</td>
         </tr>
       </table>
     </div>
 
     <p style="color: #94a3b8; font-size: 12px; line-height: 1.6;">
-      If this was you, you can safely disregard this message. If you did not initiate this login, please change your password immediately in your account settings.
+      If this was you, you can safely disregard this notification. If you did not initiate this login, please change your password in account settings immediately.
     </p>
   `;
 
+  const text = `Hero Login Alert: ${name}\n\nA successful login to your Life RPG account was detected on ${time}.\n\nAccount: ${to}\nStatus: Active Hero Session\n\nIf this was you, no action is needed. If not, please reset your password.`;
+
   return dispatchEmail({
     to,
-    subject: `🛡️ Security Notice: Successful Login to Life RPG (${name})`,
+    subject: `Life RPG - Login Security Notice (${name})`,
     preheader: `Login detected for your Life RPG hero account on ${time}.`,
+    text,
     html,
   });
 };

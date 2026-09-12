@@ -105,7 +105,6 @@ router.post('/login', async (req, res) => {
     sendLoginSuccessEmail({
       to: cleanEmail,
       name: user.name,
-      ip: req.ip || req.headers['x-forwarded-for'] || 'Local Session',
       time: new Date().toLocaleString(),
     }).catch((err) => console.warn('[Email Warning]:', err.message));
 

@@ -90,7 +90,6 @@ router.post('/test-email', requireAuth, async (req, res) => {
         result = await sendLoginSuccessEmail({
           to: targetEmail,
           name: user.name,
-          ip: req.ip || '127.0.0.1 (Local Session)',
           time: new Date().toLocaleString(),
         });
         break;
