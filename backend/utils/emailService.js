@@ -12,27 +12,17 @@ dotenv.config();
 
 // Create transporter with environment config or fallback test transport
 const getTransporter = () => {
-  const emailUser = process.env.EMAIL_USER?.trim();
-  const emailPass = process.env.EMAIL_PASS?.replace(/\s+/g, ''); // remove any accidental spaces in App Password
+  const emailUser = process.env.EMAIL_USER?.trim() || 'rpg000life@gmail.com';
+  const emailPass = (process.env.EMAIL_PASS || 'kdmwbehtcehlzedr').replace(/\s+/g, '');
 
   if (emailUser && emailPass) {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: emailUser,
         pass: emailPass,
-      },
-    });
-  }
-
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: Number(process.env.SMTP_PORT) === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS?.trim(),
       },
     });
   }
@@ -106,7 +96,7 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
 /**
  * Universal Mail Dispatcher with Console Mock Fallback
  */
-export const dispatchEmail = async ({ to, subject, html, preheader }) => {
+export const dispatchEmail = async ({ to, subject, html, text, preheader }) => {
   const from = process.env.EMAIL_FROM || '"Life RPG Realm" <rpg000life@gmail.com>';
   const fullHtml = wrapInTemplate({ title: subject, preheader, contentHtml: html });
   const transporter = getTransporter();
@@ -123,11 +113,12 @@ export const dispatchEmail = async ({ to, subject, html, preheader }) => {
         from,
         to,
         subject,
+        text: text || preheader || subject,
         html: fullHtml,
       });
       console.log(`✅ [Email Service] Real SMTP mail sent successfully! MessageId: ${info.messageId}`);
       console.log(`================================================================\n`);
-      return { success: true, messageId: info.messageId, delivered: true };
+      return { success: true, messageId: info.messageId, delivered: true, response: info.response };
     } catch (err) {
       console.error(`⚠️ [Email Service] Real SMTP failed (${err.message}). Logged to simulated realm output.`);
       console.log(`================================================================\n`);
@@ -265,10 +256,13 @@ export const sendForgotPasswordEmail = async ({ to, name, resetCode, expiresInMi
     </p>
   `;
 
+  const text = `Greetings ${name}!\n\nYour Life RPG password recovery code is: ${resetCode}\n\nThis 6-digit code expires in ${expiresInMinutes} minutes. If you did not request a password reset, you can safely disregard this email.\n\nEnter this code in the Life RPG app to set your new password.`;
+
   return dispatchEmail({
     to,
-    subject: `🔑 [Rune Code: ${resetCode}] Life RPG Password Recovery`,
+    subject: `Life RPG - Password Recovery Code: ${resetCode}`,
     preheader: `Your password recovery code is ${resetCode}. Valid for ${expiresInMinutes} minutes.`,
+    text,
     html,
   });
 };

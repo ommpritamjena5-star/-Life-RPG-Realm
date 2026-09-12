@@ -65,7 +65,7 @@
       "name": "ABC",
       "email": "ommjena25@gmail.com",
       "phone": "9229625279",
-      "password": "$2b$10$aaLIcINhUQZjmUVAGlzose9Ok0Af9b8DnR8PgR2y6r5EOu3Lev5wW",
+      "password": "$2b$10$VplWUGztCx/BY4pWgofgI.ESbGroGHcTxJiVpgJLvDEwT8l2xSQ1i",
       "avatar": "🌱 ABC",
       "characterClass": "Mage",
       "level": 3,
@@ -159,10 +159,10 @@
         }
       ],
       "createdAt": "2026-09-12T16:12:54.791Z",
-      "updatedAt": "2026-09-12T16:53:32.186Z",
+      "updatedAt": "2026-09-12T16:57:39.000Z",
       "title": "Apprentice Pathfinder",
-      "resetPasswordToken": "253148",
-      "resetPasswordExpires": "2026-09-12T17:08:32.186Z"
+      "resetPasswordToken": "802213",
+      "resetPasswordExpires": "2026-09-12T17:12:38.999Z"
     }
   ],
   "quests": [
