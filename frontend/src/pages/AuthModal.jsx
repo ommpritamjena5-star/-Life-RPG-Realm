@@ -9,28 +9,37 @@ import {
   Sparkles,
   AlertCircle,
   Zap,
-  Flame,
-  Brain,
-  Wind,
-  Heart,
   ChevronRight,
   Eye,
   EyeOff,
+  KeyRound,
+  CheckCircle2,
+  Copy,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sound } from '../utils/soundEngine';
 import { Hero3DModel } from '../components/Hero3DModel';
 
 export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplete }) => {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState(initialMode);
+  const { login, register, updateUser } = useAuth();
+  const [mode, setMode] = useState(initialMode); // 'login' | 'register' | 'forgot'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [characterClass, setCharacterClass] = useState('Warrior');
   const [avatar, setAvatar] = useState('⚔️ Shadow Knight');
+  
+  // Forgot Password State
+  const [forgotStep, setForgotStep] = useState(1); // 1 = Request Code, 2 = Enter Code & New Pass
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [serverDispatchedCode, setServerDispatchedCode] = useState('');
+  const [codeCopied, setCodeCopied] = useState(false);
+  
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -83,17 +92,56 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setLoading(true);
     sound.playClick();
 
     try {
       if (mode === 'login') {
         await login(email, password);
-      } else {
+        onClose();
+        if (onComplete) onComplete();
+      } else if (mode === 'register') {
         await register(name, email, password, `${selectedClassInfo.icon} ${name || characterClass}`, characterClass);
+        onClose();
+        if (onComplete) onComplete();
+      } else if (mode === 'forgot') {
+        if (forgotStep === 1) {
+          // Request Code
+          const res = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to dispatch recovery code');
+
+          setServerDispatchedCode(data.resetCode);
+          setRecoveryCode(data.resetCode); // Auto-populate for user convenience
+          setSuccessMsg('Recovery rune generated! Enter code below to reset password.');
+          setForgotStep(2);
+        } else {
+          // Reset Password
+          if (password !== confirmPassword) {
+            throw new Error('Passwords do not match. Please re-enter.');
+          }
+          const res = await fetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code: recoveryCode, newPassword: password }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+
+          sound.playLevelUp();
+          setSuccessMsg('Password successfully restored! Redirecting to login...');
+          setTimeout(() => {
+            setMode('login');
+            setForgotStep(1);
+            setSuccessMsg('');
+          }, 2000);
+        }
       }
-      onClose();
-      if (onComplete) onComplete();
     } catch (err) {
       setError(err.message || 'Authentication failed. Please try again.');
     } finally {
@@ -113,7 +161,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
       try {
         await login(demoEmail, demoPass);
       } catch (loginErr) {
-        // Register demo user if not yet created
         await register('Shadow Knight', demoEmail, demoPass, '⚔️ Shadow Knight', 'Warrior');
       }
 
@@ -161,7 +208,6 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
           <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
             {/* Left Column: 3D Holographic Character Awakening Portal */}
             <div className="lg:col-span-5 p-6 sm:p-8 bg-gradient-to-b from-[#0e1124] to-[#080914] border-b lg:border-b-0 lg:border-r border-purple-500/20 flex flex-col justify-between relative overflow-hidden">
-              {/* Glowing decorative background rings */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
               <div>
@@ -171,10 +217,12 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                   </span>
                 </div>
                 <h3 className="font-rpg text-xl font-black text-slate-100 uppercase tracking-wide">
-                  {selectedClassInfo.title}
+                  {mode === 'forgot' ? 'Rune Restoration' : selectedClassInfo.title}
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  {selectedClassInfo.lore}
+                  {mode === 'forgot'
+                    ? 'Recover lost credentials through ancient memory runes.'
+                    : selectedClassInfo.lore}
                 </p>
               </div>
 
@@ -204,48 +252,72 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
             <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between bg-slate-950/60">
               <div>
                 {/* Mode Switcher Tabs */}
-                <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-900/90 border border-purple-500/30 mb-6 shadow-inner">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      setMode('register');
-                      setError('');
-                    }}
-                    className={`py-2 rounded-xl text-xs font-rpg font-bold tracking-wider transition-all cursor-pointer ${
-                      mode === 'register'
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 border border-purple-400/50'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    ⚔️ AWAKEN HERO (SIGN UP)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      setMode('login');
-                      setError('');
-                    }}
-                    className={`py-2 rounded-xl text-xs font-rpg font-bold tracking-wider transition-all cursor-pointer ${
-                      mode === 'login'
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 border border-purple-400/50'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    🔑 ENTER REALM (LOG IN)
-                  </button>
-                </div>
+                {mode !== 'forgot' ? (
+                  <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-900/90 border border-purple-500/30 mb-5 shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        setMode('register');
+                        setError('');
+                        setSuccessMsg('');
+                      }}
+                      className={`py-2 rounded-xl text-xs font-rpg font-bold tracking-wider transition-all cursor-pointer ${
+                        mode === 'register'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 border border-purple-400/50'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      ⚔️ AWAKEN HERO (SIGN UP)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        setMode('login');
+                        setError('');
+                        setSuccessMsg('');
+                      }}
+                      className={`py-2 rounded-xl text-xs font-rpg font-bold tracking-wider transition-all cursor-pointer ${
+                        mode === 'login'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30 border border-purple-400/50'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      🔑 ENTER REALM (LOG IN)
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2 rounded-2xl bg-purple-950/50 border border-purple-500/30 mb-5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        setMode('login');
+                        setError('');
+                        setSuccessMsg('');
+                      }}
+                      className="px-3 py-1 rounded-xl text-xs text-purple-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" /> Back to Log In
+                    </button>
+                    <span className="text-xs font-rpg font-bold text-amber-300 uppercase mr-2">
+                      Password Restoration
+                    </span>
+                  </div>
+                )}
 
-                {/* Instant Demo Login Button */}
-                <button
-                  type="button"
-                  onClick={handleInstantDemoLogin}
-                  className="w-full mb-5 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-                >
-                  <Zap className="w-4 h-4 text-amber-400 fill-amber-400 animate-pulse" />
-                  <span>⚡ Quick Demo Login: Instant Hero Access</span>
-                </button>
+                {/* Instant Demo Login Button (in login or register mode) */}
+                {mode !== 'forgot' && (
+                  <button
+                    type="button"
+                    onClick={handleInstantDemoLogin}
+                    className="w-full mb-4 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                  >
+                    <Zap className="w-4 h-4 text-amber-400 fill-amber-400 animate-pulse" />
+                    <span>⚡ Quick Demo Login: Instant Hero Access</span>
+                  </button>
+                )}
 
                 {error && (
                   <motion.div
@@ -258,11 +330,22 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                   </motion.div>
                 )}
 
+                {successMsg && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>{successMsg}</span>
+                  </motion.div>
+                )}
+
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                  {/* Register Fields */}
                   {mode === 'register' && (
                     <>
-                      {/* Name */}
                       <div>
                         <label className="block text-xs font-semibold text-slate-300 mb-1">
                           Hero / Character Name
@@ -316,7 +399,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     </>
                   )}
 
-                  {/* Email */}
+                  {/* Email Field (Always visible) */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
                       Email Realm Address
@@ -334,60 +417,171 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     </div>
                   </div>
 
-                  {/* Password */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Secret Password Rune
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-purple-400 absolute left-3.5 top-3" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-purple-500/30 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-200"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-
-                    {/* Password Shield Meter for register mode */}
-                    {mode === 'register' && password && (
-                      <div className="mt-2 space-y-1">
-                        <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
-                          <span>Security Shield:</span>
-                          <span className="text-amber-300 font-bold">{strength.label}</span>
+                  {/* Forgot Password Step 2: Code & New Password */}
+                  {mode === 'forgot' && forgotStep === 2 && (
+                    <>
+                      {/* Generated Code Badge */}
+                      {serverDispatchedCode && (
+                        <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between">
+                          <div>
+                            <div className="text-[10px] text-amber-300 font-semibold uppercase">
+                              Dispatched Recovery Rune:
+                            </div>
+                            <div className="text-lg font-mono font-black text-amber-300 tracking-widest">
+                              {serverDispatchedCode}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(serverDispatchedCode);
+                              setCodeCopied(true);
+                              sound.playClick();
+                              setTimeout(() => setCodeCopied(false), 2000);
+                            }}
+                            className="px-3 py-1 rounded-lg bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>{codeCopied ? 'Copied' : 'Copy'}</span>
+                          </button>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                          <motion.div
-                            className={`h-full ${strength.color} rounded-full`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${strength.percent}%` }}
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          6-Digit Rune Code
+                        </label>
+                        <div className="relative">
+                          <KeyRound className="w-4 h-4 text-purple-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            required
+                            maxLength={6}
+                            value={recoveryCode}
+                            onChange={(e) => setRecoveryCode(e.target.value)}
+                            placeholder="e.g. 849201"
+                            className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900 border border-purple-500/30 font-mono tracking-widest text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                           />
                         </div>
                       </div>
-                    )}
-                  </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          New Password Rune
+                        </label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-purple-400 absolute left-3.5 top-3" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-purple-500/30 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">
+                          Confirm New Password Rune
+                        </label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-purple-400 absolute left-3.5 top-3" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-purple-500/30 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Standard Password Field (for Login and Register) */}
+                  {mode !== 'forgot' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-slate-300">
+                          Secret Password Rune
+                        </label>
+                        {mode === 'login' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sound.playClick();
+                              setMode('forgot');
+                              setForgotStep(1);
+                              setError('');
+                              setSuccessMsg('');
+                            }}
+                            className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold cursor-pointer transition-colors"
+                          >
+                            Forgot Password Rune?
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-purple-400 absolute left-3.5 top-3" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-purple-500/30 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-200"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      {/* Password Shield Meter for register mode */}
+                      {mode === 'register' && password && (
+                        <div className="mt-2 space-y-1">
+                          <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
+                            <span>Security Shield:</span>
+                            <span className="text-amber-300 font-bold">{strength.label}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                            <motion.div
+                              className={`h-full ${strength.color} rounded-full`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${strength.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-3.5 px-6 rounded-2xl font-rpg font-extrabold text-sm tracking-widest text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 shadow-xl shadow-amber-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+                    className="w-full py-3.5 px-6 rounded-2xl font-rpg font-extrabold text-sm tracking-widest text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 shadow-xl shadow-amber-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-3"
                   >
                     {loading ? (
                       <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>{mode === 'login' ? 'COMMENCE QUEST (LOG IN)' : 'AWAKEN YOUR HERO'}</span>
+                        <span>
+                          {mode === 'login'
+                            ? 'COMMENCE QUEST (LOG IN)'
+                            : mode === 'register'
+                            ? 'AWAKEN YOUR HERO'
+                            : forgotStep === 1
+                            ? 'DISPATCH RECOVERY RUNE'
+                            : 'RESTORE HERO CREDENTIALS'}
+                        </span>
                         <ChevronRight className="w-4 h-4" />
                       </>
                     )}

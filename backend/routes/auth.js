@@ -179,4 +179,90 @@ router.post('/onboarding', requireAuth, (req, res) => {
   }
 });
 
+// POST /api/auth/forgot-password
+// Generates a 6-digit Rune Reset Code
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Please provide your email address.' });
+    }
+
+    const user = db.findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'No adventurer found with this email address.' });
+    }
+
+    // Generate 6-digit Rune Recovery Code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetExpires = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
+
+    db.updateUser(user._id || user.id, {
+      resetPasswordToken: resetCode,
+      resetPasswordExpires: resetExpires,
+    });
+
+    return res.json({
+      message: 'Recovery Rune dispatched! Use this rune code to reset your password.',
+      resetCode, // provided so user can test/reset seamlessly in all environments
+      expiresInMinutes: 15,
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({ error: 'Failed to process password recovery.' });
+  }
+});
+
+// POST /api/auth/reset-password
+// Validates code and sets new password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Please provide email, recovery rune code, and new password.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    }
+
+    const user = db.findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    if (!user.resetPasswordToken || user.resetPasswordToken !== code.trim()) {
+      return res.status(400).json({ error: 'Invalid recovery rune code. Please try again.' });
+    }
+
+    if (user.resetPasswordExpires && new Date() > new Date(user.resetPasswordExpires)) {
+      return res.status(400).json({ error: 'Recovery rune code has expired. Please request a new one.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const updatedUser = db.updateUser(user._id || user.id, {
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+
+    const token = generateToken(updatedUser);
+    const { password: _, ...userData } = updatedUser;
+
+    return res.json({
+      message: 'Password successfully restored! Your hero access has been revived.',
+      user: userData,
+      token,
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ error: 'Failed to reset password.' });
+  }
+});
+
 export default router;
+
