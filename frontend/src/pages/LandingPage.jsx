@@ -23,8 +23,8 @@ import { CardTilt } from '../components/CardTilt';
 
 export const LandingPage = ({ onStartJourney, onLogin }) => {
   const [demoQuestCompleted, setDemoQuestCompleted] = useState(false);
-  const [demoXp, setDemoXp] = useState(65);
-  const [demoGold, setDemoGold] = useState(120);
+  const [demoXp, setDemoXp] = useState(0);
+  const [demoGold, setDemoGold] = useState(0);
   const [activeHeroClass, setActiveHeroClass] = useState('Warrior');
 
   const classDescriptions = {

@@ -2,7 +2,6 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../data/storageEngine.js';
 import { User } from '../models/User.js';
-import { getDbStatus } from '../config/db.js';
 import { generateToken, requireAuth } from '../middleware/auth.js';
 import {
   sendWelcomeEmail,
@@ -25,7 +24,7 @@ router.post('/register', async (req, res) => {
     const cleanName = name.trim();
     const cleanPhone = phone.trim();
 
-    const existing = db.findUserByEmail(cleanEmail);
+    const existing = await db.findUserByEmail(cleanEmail);
     if (existing) {
       return res.status(400).json({ error: 'User with this email already exists. Please log in.' });
     }
@@ -33,7 +32,7 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = db.createUser({
+    const newUser = await db.createUser({
       name: cleanName,
       email: cleanEmail,
       phone: cleanPhone,
@@ -41,22 +40,6 @@ router.post('/register', async (req, res) => {
       avatar: avatar || '🌱 Novice Adventurer',
       characterClass: characterClass || 'Novice',
     });
-
-    // Save to MongoDB if connected
-    if (getDbStatus()) {
-      try {
-        await User.create({
-          name: cleanName,
-          email: cleanEmail,
-          phone: cleanPhone,
-          password: hashedPassword,
-          avatar: avatar || '🌱 Novice Adventurer',
-          characterClass: characterClass || 'Novice',
-        });
-      } catch (mongoErr) {
-        console.warn('[MongoDB] Sync note:', mongoErr.message);
-      }
-    }
 
     // Send Welcome Email (Non-blocking async)
     sendWelcomeEmail({
@@ -66,8 +49,6 @@ router.post('/register', async (req, res) => {
     }).catch((err) => console.warn('[Email Warning]:', err.message));
 
     const token = generateToken(newUser);
-
-    // Filter out password from response
     const { password: _, ...userData } = newUser;
 
     return res.status(201).json({
@@ -81,32 +62,43 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/login
+// POST /api/auth/login (Accepts Email, Mobile Phone Number, or Hero Name)
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, identifier, password } = req.body;
+    const loginIdentifier = (email || identifier || '').trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Please provide both email and password.' });
+    if (!loginIdentifier || !password) {
+      return res.status(400).json({ error: 'Please provide your Email/Mobile/Username and Password.' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const user = db.findUserByEmail(cleanEmail);
+    const user = await db.findUserByIdentifier(loginIdentifier);
+
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({
+        error: `No adventurer account found for "${loginIdentifier}". Please check your spelling or click "Awaken Hero" to sign up!`,
+      });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    let isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch && typeof password === 'string') {
+      isMatch = await bcrypt.compare(password.trim(), user.password);
+    }
+
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({
+        error: 'Incorrect password. Please verify your password or use "Forgot Password" to restore access.',
+      });
     }
 
     // Send Login Alert Email (Non-blocking async)
-    sendLoginSuccessEmail({
-      to: cleanEmail,
-      name: user.name,
-      time: new Date().toLocaleString(),
-    }).catch((err) => console.warn('[Email Warning]:', err.message));
+    if (user.email && user.email.includes('@')) {
+      sendLoginSuccessEmail({
+        to: user.email,
+        name: user.name,
+        time: new Date().toLocaleString(),
+      }).catch((err) => console.warn('[Email Warning]:', err.message));
+    }
 
     const token = generateToken(user);
     const { password: _, ...userData } = user;
@@ -129,9 +121,9 @@ router.get('/me', requireAuth, (req, res) => {
 });
 
 // POST /api/auth/onboarding
-router.post('/onboarding', requireAuth, (req, res) => {
+router.post('/onboarding', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const {
       characterName,
       characterClass,
@@ -156,14 +148,13 @@ router.post('/onboarding', requireAuth, (req, res) => {
       onboardingCompleted: true,
     };
 
-    const updatedUser = db.updateUser(userId, {
+    const updatedUser = await db.updateUser(userId, {
       name: characterName || req.user.name,
       characterClass: characterClass || req.user.characterClass,
       avatar: avatar || req.user.avatar,
       settings: updatedSettings,
     });
 
-    // Generate introductory starter quests tailored to user's onboarding choices
     const starterQuests = [
       {
         userId,
@@ -209,7 +200,9 @@ router.post('/onboarding', requireAuth, (req, res) => {
       },
     ];
 
-    starterQuests.forEach((q) => db.createQuest(q));
+    for (const q of starterQuests) {
+      await db.createQuest(q);
+    }
 
     const { password: _, ...userData } = updatedUser;
     return res.json({
@@ -222,75 +215,47 @@ router.post('/onboarding', requireAuth, (req, res) => {
   }
 });
 
-// POST /api/auth/forgot-password
-// Generates a 6-digit Rune Reset Code and sends it via email
+// POST /api/auth/forgot-password (Accepts Email, Mobile, or Username)
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, identifier } = req.body;
+    const searchTarget = (email || identifier || '').trim();
 
-    if (!email || !email.trim()) {
-      return res.status(400).json({ error: 'Please provide your email address.' });
+    if (!searchTarget) {
+      return res.status(400).json({ error: 'Please provide your Email, Mobile number, or Hero name.' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    let user = db.findUserByEmail(cleanEmail);
+    const user = await db.findUserByIdentifier(searchTarget);
 
-    if (!user && getDbStatus()) {
-      try {
-        const mongoUser = await User.findOne({ email: cleanEmail });
-        if (mongoUser) {
-          user = mongoUser.toObject();
-          if (!db.findUserById(user._id?.toString())) {
-            db.data.users.push(user);
-            db.saveToFile();
-          }
-        }
-      } catch (mongoErr) {
-        console.warn('[MongoDB findUser error]:', mongoErr.message);
-      }
-    }
-
-    if (!user) {
+    if (!user || !user.email) {
       return res.status(404).json({
-        error: `No adventurer account found with email "${cleanEmail}". Please check the spelling or Sign Up first!`,
+        error: `No adventurer account found for "${searchTarget}". Please check the spelling or Sign Up first!`,
       });
     }
 
-    // Generate 6-digit Rune Recovery Code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetExpires = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
+    const resetExpires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    db.updateUser(user._id || user.id, {
+    await db.updateUser(user._id || user.id, {
       resetPasswordToken: resetCode,
       resetPasswordExpires: resetExpires,
     });
 
-    if (getDbStatus()) {
-      try {
-        await User.updateOne(
-          { email: cleanEmail },
-          { resetPasswordToken: resetCode, resetPasswordExpires: resetExpires }
-        );
-      } catch (mongoErr) {
-        console.warn('[MongoDB update token note]:', mongoErr.message);
-      }
-    }
-
-    // Send Forgot Password Email
     try {
       await sendForgotPasswordEmail({
-        to: cleanEmail,
+        to: user.email,
         name: user.name || 'Hero',
         resetCode,
         expiresInMinutes: 15,
       });
-      console.log(`[Forgot Password] Recovery rune code successfully dispatched to ${cleanEmail}`);
+      console.log(`[Forgot Password] Recovery rune code successfully dispatched to ${user.email}`);
     } catch (err) {
       console.warn('[Email Warning]:', err.message);
     }
 
     return res.status(200).json({
-      message: `A 6-digit recovery code has been dispatched to ${cleanEmail}. Please check your inbox or spam folder.`,
+      message: `A 6-digit recovery code has been dispatched to ${user.email}. Please check your inbox or spam folder.`,
+      email: user.email,
       expiresInMinutes: 15,
     });
   } catch (error) {
@@ -300,39 +265,23 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // POST /api/auth/reset-password
-// Validates code and sets new password
 router.post('/reset-password', async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email, identifier, code, newPassword } = req.body;
+    const searchTarget = (email || identifier || '').trim();
 
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ error: 'Please provide email, recovery rune code, and new password.' });
+    if (!searchTarget || !code || !newPassword) {
+      return res.status(400).json({ error: 'Please provide your Email/Username, recovery rune code, and new password.' });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    let user = db.findUserByEmail(cleanEmail);
-
-    if (!user && getDbStatus()) {
-      try {
-        const mongoUser = await User.findOne({ email: cleanEmail });
-        if (mongoUser) {
-          user = mongoUser.toObject();
-          if (!db.findUserById(user._id?.toString())) {
-            db.data.users.push(user);
-            db.saveToFile();
-          }
-        }
-      } catch (mongoErr) {
-        console.warn('[MongoDB findUser error]:', mongoErr.message);
-      }
-    }
+    const user = await db.findUserByIdentifier(searchTarget);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: 'User account not found.' });
     }
 
     if (!user.resetPasswordToken || user.resetPasswordToken.trim() !== String(code).trim()) {
@@ -346,22 +295,11 @@ router.post('/reset-password', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    const updatedUser = db.updateUser(user._id || user.id, {
+    const updatedUser = await db.updateUser(user._id || user.id, {
       password: hashedPassword,
       resetPasswordToken: null,
       resetPasswordExpires: null,
     });
-
-    if (getDbStatus()) {
-      try {
-        await User.updateOne(
-          { email: cleanEmail },
-          { password: hashedPassword, resetPasswordToken: null, resetPasswordExpires: null }
-        );
-      } catch (mongoErr) {
-        console.warn('[MongoDB password update note]:', mongoErr.message);
-      }
-    }
 
     const token = generateToken(updatedUser);
     const { password: _, ...userData } = updatedUser;
@@ -378,4 +316,3 @@ router.post('/reset-password', async (req, res) => {
 });
 
 export default router;
-

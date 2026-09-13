@@ -59,6 +59,10 @@ const userSchema = new mongoose.Schema(
       onboardingCompleted: { type: Boolean, default: false },
     },
 
+    // Password Recovery Runes
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: String, default: null },
+
     // Inventory & Equipped Items
     inventory: [
       {

@@ -4,7 +4,6 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Helper to determine title based on level
 const getTitleForLevel = (level) => {
   if (level >= 30) return 'God of Discipline';
   if (level >= 25) return 'Grand Archmage';
@@ -17,17 +16,15 @@ const getTitleForLevel = (level) => {
 };
 
 // GET /api/character
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
-    // Check and apply any pending sloth penalties from missed days or overdue quests
-    const penalties = db.checkAndApplySlothPenalties(userId);
-    const user = db.findUserById(userId) || req.user;
-    const computedTitle = getTitleForLevel(user.level);
-    
-    // Check if title needs update
+    const userId = String(req.user._id || req.user.id);
+    const penalties = await db.checkAndApplySlothPenalties(userId);
+    const user = (await db.findUserById(userId)) || req.user;
+    const computedTitle = getTitleForLevel(user.level || 1);
+
     if (user.title !== computedTitle) {
-      db.updateUser(user._id || user.id, { title: computedTitle });
+      await db.updateUser(user._id || user.id, { title: computedTitle });
       user.title = computedTitle;
     }
 
@@ -39,23 +36,22 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/character/equip
-router.post('/equip', requireAuth, (req, res) => {
+router.post('/equip', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const { itemId } = req.body;
 
-    const user = db.findUserById(userId);
-    const inventory = user.inventory || [];
-    
-    const targetItem = inventory.find((i) => i.itemId === itemId);
+    const user = await db.findUserById(userId);
+    const inventory = Array.isArray(user?.inventory) ? [...user.inventory] : [];
+
+    const targetItem = inventory.find((i) => String(i.itemId) === String(itemId));
     if (!targetItem) {
       return res.status(404).json({ error: 'Item not found in your inventory.' });
     }
 
-    // Toggle equip state
     targetItem.isEquipped = !targetItem.isEquipped;
 
-    const updatedUser = db.updateUser(userId, { inventory });
+    const updatedUser = await db.updateUser(userId, { inventory });
     const { password: _, ...userData } = updatedUser;
 
     return res.json({

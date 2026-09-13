@@ -5,19 +5,17 @@ import { requireAuth } from '../middleware/auth.js';
 const router = express.Router();
 
 // GET /api/leaderboard
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const currentUserId = req.user._id || req.user.id;
-    const leaderboard = db.getLeaderboard();
+    const currentUserId = String(req.user._id || req.user.id);
+    const leaderboard = await db.getLeaderboard();
 
-    // Map ranks and flag current user
     const rankedLeaderboard = leaderboard.map((player, index) => ({
       rank: index + 1,
       ...player,
-      isCurrentUser: player.id === currentUserId,
+      isCurrentUser: String(player.id) === currentUserId,
     }));
 
-    // Find current user's exact rank
     const userRankIndex = rankedLeaderboard.findIndex((p) => p.isCurrentUser);
     const currentUserRank = userRankIndex !== -1 ? userRankIndex + 1 : null;
 

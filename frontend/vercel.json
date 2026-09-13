@@ -6,7 +6,7 @@
     },
     {
       "source": "/api/(.*)",
-      "destination": "https://life-rpg-realm.onrender.com/api/$1"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",

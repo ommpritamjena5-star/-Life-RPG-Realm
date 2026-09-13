@@ -1,82 +1,112 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { User } from '../models/User.js';
+import { Quest } from '../models/Quest.js';
+import { Schedule } from '../models/Schedule.js';
+import { Session } from '../models/Session.js';
+import { Item } from '../models/Item.js';
+import { Achievement, UserAchievement } from '../models/Achievement.js';
 import { defaultAchievements, defaultShopItems } from './seedData.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'db.json');
 
 // Leveling formula: XP_needed = Math.floor(100 * Math.pow(level, 1.5))
 export const calculateXpRequired = (level) => {
   return Math.floor(100 * Math.pow(level, 1.5));
 };
 
-// Initial database structure
-const getInitialState = () => ({
-  users: [],
-  quests: [],
-  schedules: [],
-  sessions: [],
-  items: defaultShopItems,
-  achievements: defaultAchievements,
-  userAchievements: [],
-});
-
-class StorageEngine {
+class MongoStorageEngine {
   constructor() {
-    this.data = getInitialState();
-    this.loadFromFile();
+    this.initialized = false;
   }
 
-  loadFromFile() {
+  // Ensure default catalog exists in MongoDB
+  async ensureCatalog() {
     try {
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
-        const parsed = JSON.parse(raw);
-        this.data = {
-          ...getInitialState(),
-          ...parsed,
-          items: parsed.items && parsed.items.length ? parsed.items : defaultShopItems,
-          achievements: parsed.achievements && parsed.achievements.length ? parsed.achievements : defaultAchievements,
-        };
-      } else {
-        this.saveToFile();
+      const itemCount = await Item.countDocuments();
+      if (itemCount === 0) {
+        await Item.insertMany(defaultShopItems);
+        console.log('[MongoDB] Seeded default Bazaar items.');
       }
+      const achCount = await Achievement.countDocuments();
+      if (achCount === 0) {
+        await Achievement.insertMany(defaultAchievements);
+        console.log('[MongoDB] Seeded default Achievements.');
+      }
+      this.initialized = true;
     } catch (e) {
-      console.error('[StorageEngine] Error loading db.json:', e.message);
-      this.data = getInitialState();
-    }
-  }
-
-  saveToFile() {
-    try {
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
-    } catch (e) {
-      console.error('[StorageEngine] Error saving db.json:', e.message);
+      console.warn('[MongoDB] Catalog init note:', e.message);
     }
   }
 
   // Users
-  findUserByEmail(email) {
+  async findUserByEmail(email) {
     if (!email) return null;
     const searchEmail = String(email).trim().toLowerCase();
-    return this.data.users.find((u) => u.email && String(u.email).trim().toLowerCase() === searchEmail);
+    return await User.findOne({ email: searchEmail }).lean();
   }
 
-  findUserById(id) {
-    return this.data.users.find((u) => u._id === id || u.id === id);
+  async findUserByIdentifier(identifier) {
+    if (!identifier) return null;
+    const clean = String(identifier).trim();
+    const cleanLower = clean.toLowerCase();
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // 1. Direct or lowercase email match
+    let user = await User.findOne({ email: cleanLower }).lean();
+    if (user) return user;
+
+    // 2. Case-insensitive exact email match
+    try {
+      user = await User.findOne({ email: { $regex: new RegExp(`^${escapeRegex(clean)}$`, 'i') } }).lean();
+      if (user) return user;
+    } catch {}
+
+    // 3. Email prefix matching (e.g. piku6664@gmail.com vs piku6664@gmail or username as email prefix)
+    if (cleanLower.includes('@')) {
+      const prefix = cleanLower.split('@')[0];
+      try {
+        user = await User.findOne({ email: { $regex: new RegExp(`^${escapeRegex(prefix)}(@.*)?$`, 'i') } }).lean();
+        if (user) return user;
+      } catch {}
+    } else {
+      try {
+        user = await User.findOne({ email: { $regex: new RegExp(`^${escapeRegex(cleanLower)}@`, 'i') } }).lean();
+        if (user) return user;
+      } catch {}
+    }
+
+    // 4. Phone number match (digits only or partial matching)
+    const digitsOnly = clean.replace(/\D/g, '');
+    if (digitsOnly.length >= 7) {
+      try {
+        user = await User.findOne({ phone: { $regex: new RegExp(digitsOnly + '$') } }).lean();
+        if (user) return user;
+      } catch {}
+    }
+
+    // 5. Hero / Character Name match (case-insensitive)
+    try {
+      user = await User.findOne({ name: { $regex: new RegExp(`^${escapeRegex(clean)}$`, 'i') } }).lean();
+      if (user) return user;
+    } catch {}
+
+    return null;
   }
 
-  createUser(userData) {
-    const newUser = {
-      _id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+  async findUserById(id) {
+    if (!id) return null;
+    try {
+      return await User.findById(id).lean();
+    } catch {
+      return await User.findOne({ _id: id }).lean();
+    }
+  }
+
+  async createUser(userData) {
+    const user = await User.create({
       ...userData,
       level: 1,
       currentXp: 0,
       xpToNextLevel: calculateXpRequired(1),
       totalXpEarned: 0,
-      gold: 100, // starting gold bonus
+      gold: 100,
       streak: 1,
       lastActiveDate: new Date().toISOString().split('T')[0],
       streakHistory: [{ date: new Date().toISOString().split('T')[0], completed: true }],
@@ -117,32 +147,24 @@ class StorageEngine {
         ...(userData.settings || {}),
       },
       inventory: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.data.users.push(newUser);
-    this.saveToFile();
-    return newUser;
+    });
+    return user.toObject ? user.toObject() : user;
   }
 
-  updateUser(id, updates) {
-    const userIndex = this.data.users.findIndex((u) => u._id === id || u.id === id);
-    if (userIndex === -1) return null;
-    this.data.users[userIndex] = {
-      ...this.data.users[userIndex],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToFile();
-    return this.data.users[userIndex];
+  async updateUser(id, updates) {
+    try {
+      return await User.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+    } catch {
+      return await User.findOneAndUpdate({ _id: id }, { $set: updates }, { new: true }).lean();
+    }
   }
 
   // Award XP & Gold with Non-Linear Level Progression
-  awardXpAndGold(userId, xpGain, goldGain, attribute = null, attributePoints = 2) {
-    const user = this.findUserById(userId);
+  async awardXpAndGold(userId, xpGain, goldGain, attribute = null, attributePoints = 2) {
+    const user = await this.findUserById(userId);
     if (!user) return null;
 
-    let { level, currentXp, xpToNextLevel, totalXpEarned, gold, attributes } = user;
+    let { level = 1, currentXp = 0, totalXpEarned = 0, gold = 0, attributes = {} } = user;
     let leveledUp = false;
     let levelsGained = 0;
 
@@ -150,28 +172,35 @@ class StorageEngine {
     totalXpEarned += xpGain;
     gold += goldGain;
 
-    if (attribute && attributes[attribute] !== undefined) {
-      attributes[attribute] += attributePoints;
+    const updatedAttributes = {
+      strength: attributes.strength || 10,
+      intellect: attributes.intellect || 10,
+      vitality: attributes.vitality || 10,
+      agility: attributes.agility || 10,
+      discipline: attributes.discipline || 10,
+      charisma: attributes.charisma || 10,
+    };
+
+    if (attribute && updatedAttributes[attribute] !== undefined) {
+      updatedAttributes[attribute] += attributePoints;
     }
 
-    // Check for level ups (can handle multiple level ups if huge XP)
+    let xpToNextLevel = calculateXpRequired(level);
     while (currentXp >= xpToNextLevel) {
       currentXp -= xpToNextLevel;
       level += 1;
       levelsGained += 1;
       leveledUp = true;
       xpToNextLevel = calculateXpRequired(level);
-      // Give bonus gold and attributes on level up
       gold += 50 * level;
-      Object.keys(attributes).forEach((attr) => {
-        attributes[attr] += 1;
+      Object.keys(updatedAttributes).forEach((attr) => {
+        updatedAttributes[attr] += 1;
       });
     }
 
-    // Update streak if needed
     const today = new Date().toISOString().split('T')[0];
     let streak = user.streak || 1;
-    let streakHistory = user.streakHistory || [];
+    let streakHistory = Array.isArray(user.streakHistory) ? [...user.streakHistory] : [];
 
     if (user.lastActiveDate !== today) {
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -183,24 +212,18 @@ class StorageEngine {
       streakHistory.push({ date: today, completed: true });
     }
 
-    // Dynamic Character Archetype Evolution based on Real-World Progress & Dominant Attributes
     let characterClass = user.characterClass || 'Novice';
     let archetypeEvolved = false;
 
     if (level >= 2 || totalXpEarned >= 80) {
-      const { strength = 10, intellect = 10, vitality = 10, agility = 10 } = attributes || {};
+      const { strength = 10, intellect = 10, vitality = 10, agility = 10 } = updatedAttributes;
       const maxAttr = Math.max(strength, intellect, vitality, agility);
 
       let evolvedArchetype = characterClass;
-      if (maxAttr === strength && strength > 10) {
-        evolvedArchetype = 'Warrior';
-      } else if (maxAttr === intellect && intellect > 10) {
-        evolvedArchetype = 'Mage';
-      } else if (maxAttr === agility && agility > 10) {
-        evolvedArchetype = 'Rogue';
-      } else if (maxAttr === vitality && vitality > 10) {
-        evolvedArchetype = 'Paladin';
-      }
+      if (maxAttr === strength && strength > 10) evolvedArchetype = 'Warrior';
+      else if (maxAttr === intellect && intellect > 10) evolvedArchetype = 'Mage';
+      else if (maxAttr === agility && agility > 10) evolvedArchetype = 'Rogue';
+      else if (maxAttr === vitality && vitality > 10) evolvedArchetype = 'Paladin';
 
       if (evolvedArchetype !== characterClass) {
         characterClass = evolvedArchetype;
@@ -208,21 +231,20 @@ class StorageEngine {
       }
     }
 
-    const updated = this.updateUser(userId, {
+    const updated = await this.updateUser(userId, {
       level,
       currentXp,
       xpToNextLevel,
       totalXpEarned,
       gold,
-      attributes,
+      attributes: updatedAttributes,
       characterClass,
       streak,
       lastActiveDate: today,
       streakHistory,
     });
 
-    // Check achievements
-    this.checkUserAchievements(userId);
+    await this.checkUserAchievements(userId);
 
     return {
       user: updated,
@@ -237,270 +259,204 @@ class StorageEngine {
   }
 
   // Deduct XP, Gold, Discipline and reduce streak on task skip or inactivity
-  deductXpAndPenalize(userId, xpLoss = 30, goldLoss = 10, attributeLoss = 'discipline', reason = 'Skipped Quest') {
-    const user = this.findUserById(userId);
+  async deductXpAndPenalize(userId, xpLoss = 30, goldLoss = 10, attributeLoss = 'discipline', reason = 'Skipped Quest') {
+    const user = await this.findUserById(userId);
     if (!user) return null;
 
-    let { currentXp, totalXpEarned, gold, attributes, streak, inventory } = user;
+    let { currentXp = 0, totalXpEarned = 0, gold = 0, attributes = {}, streak = 1, inventory = [] } = user;
     let shieldUsed = false;
 
-    // Check if user has an active Aegis Streak Shield that blocks streak penalty
-    const shieldIndex = inventory?.findIndex((item) => item.effects?.streakFreeze && !item.isConsumed);
-    if (shieldIndex !== undefined && shieldIndex !== -1) {
+    const shieldIndex = inventory.findIndex((item) => item.effects?.streakProtection && !item.isConsumed);
+    if (shieldIndex !== -1) {
       inventory[shieldIndex].isConsumed = true;
       shieldUsed = true;
     } else {
-      // Streak reduced by 1 (or reset to 0 if multiple days skipped)
-      streak = Math.max(0, (streak || 1) - 1);
+      streak = Math.max(1, streak - 1);
     }
 
-    // Deduct XP (cannot fall below 0)
-    const actualXpLoss = Math.min(currentXp, xpLoss);
     currentXp = Math.max(0, currentXp - xpLoss);
-    totalXpEarned = Math.max(0, totalXpEarned - actualXpLoss);
-
-    // Deduct Gold (cannot fall below 0)
-    const actualGoldLoss = Math.min(gold, goldLoss);
+    totalXpEarned = Math.max(0, totalXpEarned - xpLoss);
     gold = Math.max(0, gold - goldLoss);
 
-    // Minor discipline drain (min 5)
-    if (attributes && attributes[attributeLoss] && attributes[attributeLoss] > 5) {
-      attributes[attributeLoss] = Math.max(5, attributes[attributeLoss] - 1);
-    }
-
-    // Record penalty in user's penalty log
-    const penaltyRecord = {
-      id: 'pen_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-      date: new Date().toISOString(),
-      reason,
-      xpLost: xpLoss,
-      goldLost: goldLoss,
-      streakLost: shieldUsed ? 0 : 1,
-      shieldUsed,
+    const updatedAttributes = {
+      strength: attributes.strength || 10,
+      intellect: attributes.intellect || 10,
+      vitality: attributes.vitality || 10,
+      agility: attributes.agility || 10,
+      discipline: attributes.discipline || 10,
+      charisma: attributes.charisma || 10,
     };
 
-    const penaltyLogs = user.penaltyLogs || [];
-    penaltyLogs.unshift(penaltyRecord);
+    if (attributeLoss && updatedAttributes[attributeLoss] !== undefined) {
+      updatedAttributes[attributeLoss] = Math.max(1, updatedAttributes[attributeLoss] - 1);
+    }
 
-    const updated = this.updateUser(userId, {
+    const updated = await this.updateUser(userId, {
       currentXp,
       totalXpEarned,
       gold,
-      attributes,
       streak,
-      inventory: inventory || [],
-      penaltyLogs: penaltyLogs.slice(0, 50), // keep recent 50 logs
+      attributes: updatedAttributes,
+      inventory,
     });
 
     return {
       user: updated,
-      penalty: penaltyRecord,
+      penaltyApplied: true,
+      xpLoss,
+      goldLoss,
+      attributeLoss,
+      reason,
       shieldUsed,
-      xpLost: actualXpLoss,
-      goldLost: actualGoldLoss,
-      newStreak: streak,
     };
   }
 
-  // Automatic Inactivity & Overdue Task Decay Checker
-  checkAndApplySlothPenalties(userId) {
-    const user = this.findUserById(userId);
-    if (!user) return [];
-
+  // Check and apply sloth penalties for overdue quests
+  async checkAndApplySlothPenalties(userId) {
     const today = new Date().toISOString().split('T')[0];
-    const penaltiesApplied = [];
+    const overdueQuests = await Quest.find({
+      userId,
+      isCompleted: false,
+      scheduledDate: { $lt: today },
+    }).lean();
 
-    // 1. Check for skipped days of inactivity
-    if (user.lastActiveDate && user.lastActiveDate !== today) {
-      const lastDate = new Date(user.lastActiveDate);
-      const currentDate = new Date(today);
-      const diffTime = Math.abs(currentDate - lastDate);
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays >= 2) {
-        // Inactive for 2 or more days: Apply Sloth Inactivity Penalty
-        const daysSkipped = diffDays - 1;
-        const xpLoss = daysSkipped * 25;
-        const goldLoss = daysSkipped * 15;
-        const result = this.deductXpAndPenalize(
-          userId,
-          xpLoss,
-          goldLoss,
-          'discipline',
-          `Sloth Penalty: Inactive for ${diffDays} consecutive days`
-        );
-        if (result) penaltiesApplied.push(result.penalty);
+    const penalties = [];
+    for (const q of overdueQuests) {
+      const penalty = await this.deductXpAndPenalize(userId, 20, 10, 'discipline', `Overdue: ${q.title}`);
+      if (penalty) {
+        penalties.push({ questId: q._id, title: q.title, ...penalty });
       }
+      await Quest.findByIdAndUpdate(q._id, { scheduledDate: today });
     }
-
-    // 2. Check for overdue uncompleted quests from previous days
-    const pendingPastQuests = this.data.quests.filter(
-      (q) => q.userId === userId && q.status === 'pending' && !q.isCompleted && q.scheduledDate < today
-    );
-
-    for (const q of pendingPastQuests) {
-      // Mark quest as failed
-      this.updateQuest(q._id || q.id, {
-        status: 'failed',
-        failedAt: new Date().toISOString(),
-        penaltyApplied: true,
-      });
-
-      const xpLoss = Math.round((q.xpReward || 50) * 0.5);
-      const goldLoss = Math.round((q.goldReward || 20) * 0.5);
-      const result = this.deductXpAndPenalize(
-        userId,
-        xpLoss,
-        goldLoss,
-        'discipline',
-        `Overdue Task: "${q.title}" was not completed in time`
-      );
-      if (result) penaltiesApplied.push(result.penalty);
-    }
-
-    return penaltiesApplied;
+    return penalties;
   }
-
 
   // Quests
-  getQuests(userId, query = {}) {
-    let list = this.data.quests.filter((q) => q.userId === userId);
-    if (query.tier) list = list.filter((q) => q.tier === query.tier);
-    if (query.category) list = list.filter((q) => q.category === query.category);
-    if (query.date) list = list.filter((q) => q.scheduledDate === query.date);
-    if (query.status) list = list.filter((q) => q.status === query.status);
-    return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  async getQuests(userId, filters = {}) {
+    const query = { userId };
+    if (filters.date) query.scheduledDate = filters.date;
+    if (filters.category) query.category = filters.category;
+    if (filters.difficulty) query.difficulty = filters.difficulty;
+    if (filters.tier) query.tier = filters.tier;
+    if (filters.status) query.status = filters.status;
+    if (filters.isCompleted !== undefined) query.isCompleted = filters.isCompleted === 'true' || filters.isCompleted === true;
+
+    return await Quest.find(query).sort({ priority: -1, createdAt: -1 }).lean();
   }
 
-  getQuestById(id) {
-    return this.data.quests.find((q) => q._id === id || q.id === id);
+  async getQuestById(id) {
+    try {
+      return await Quest.findById(id).lean();
+    } catch {
+      return await Quest.findOne({ _id: id }).lean();
+    }
   }
 
-  createQuest(questData) {
-    const newQuest = {
-      _id: 'quest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-      ...questData,
-      isCompleted: false,
-      status: 'pending',
-      subtasks: questData.subtasks || [],
-      scheduledDate: questData.scheduledDate || new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.data.quests.push(newQuest);
-    this.saveToFile();
-    return newQuest;
+  async createQuest(questData) {
+    const quest = await Quest.create(questData);
+    return quest.toObject ? quest.toObject() : quest;
   }
 
-  updateQuest(id, updates) {
-    const index = this.data.quests.findIndex((q) => q._id === id || q.id === id);
-    if (index === -1) return null;
-    this.data.quests[index] = {
-      ...this.data.quests[index],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToFile();
-    return this.data.quests[index];
+  async updateQuest(id, updates) {
+    try {
+      return await Quest.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+    } catch {
+      return await Quest.findOneAndUpdate({ _id: id }, { $set: updates }, { new: true }).lean();
+    }
   }
 
-  deleteQuest(id) {
-    const initialLen = this.data.quests.length;
-    this.data.quests = this.data.quests.filter((q) => q._id !== id && q.id !== id);
-    this.saveToFile();
-    return this.data.quests.length < initialLen;
+  async deleteQuest(id) {
+    try {
+      await Quest.findByIdAndDelete(id);
+    } catch {
+      await Quest.findOneAndDelete({ _id: id });
+    }
+    return true;
   }
 
-  // Schedules (Time Blocks)
-  getSchedules(userId, date) {
-    return this.data.schedules
-      .filter((s) => s.userId === userId && (!date || s.date === date))
-      .sort((a, b) => (a.startTime > b.startTime ? 1 : -1));
+  // Schedules
+  async getSchedules(userId, date = null) {
+    const query = { userId };
+    if (date) query.date = date;
+    return await Schedule.find(query).sort({ startTime: 1 }).lean();
   }
 
-  createSchedule(scheduleData) {
-    const newSchedule = {
-      _id: 'sched_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-      ...scheduleData,
-      isCompleted: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.data.schedules.push(newSchedule);
-    this.saveToFile();
-    return newSchedule;
+  async getScheduleById(id) {
+    try {
+      return await Schedule.findById(id).lean();
+    } catch {
+      return await Schedule.findOne({ _id: id }).lean();
+    }
   }
 
-  updateSchedule(id, updates) {
-    const index = this.data.schedules.findIndex((s) => s._id === id || s.id === id);
-    if (index === -1) return null;
-    this.data.schedules[index] = {
-      ...this.data.schedules[index],
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    this.saveToFile();
-    return this.data.schedules[index];
+  async createSchedule(scheduleData) {
+    const schedule = await Schedule.create(scheduleData);
+    return schedule.toObject ? schedule.toObject() : schedule;
   }
 
-  deleteSchedule(id) {
-    const initialLen = this.data.schedules.length;
-    this.data.schedules = this.data.schedules.filter((s) => s._id !== id && s.id !== id);
-    this.saveToFile();
-    return this.data.schedules.length < initialLen;
+  async updateSchedule(id, updates) {
+    try {
+      return await Schedule.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+    } catch {
+      return await Schedule.findOneAndUpdate({ _id: id }, { $set: updates }, { new: true }).lean();
+    }
   }
 
-  // Sessions (Focus Sub-sessions)
-  getSessions(userId, date = null) {
-    let list = this.data.sessions.filter((s) => s.userId === userId);
-    if (date) list = list.filter((s) => s.date === date);
-    return list.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+  async deleteSchedule(id) {
+    try {
+      await Schedule.findByIdAndDelete(id);
+    } catch {
+      await Schedule.findOneAndDelete({ _id: id });
+    }
+    return true;
   }
 
-  createSession(sessionData) {
-    const newSession = {
-      _id: 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-      ...sessionData,
-      date: sessionData.date || new Date().toISOString().split('T')[0],
-      completedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    this.data.sessions.push(newSession);
-    this.saveToFile();
-    return newSession;
+  // Focus Sub-Sessions
+  async getSessions(userId, date = null) {
+    const query = { userId };
+    if (date) query.date = date;
+    return await Session.find(query).sort({ createdAt: -1 }).lean();
   }
 
-  // Items & Store
-  getItems(userId = null) {
-    return this.data.items.filter((item) => !item.isCustom || item.createdBy === userId || !item.createdBy);
+  async createSession(sessionData) {
+    const session = await Session.create(sessionData);
+    return session.toObject ? session.toObject() : session;
   }
 
-  createCustomItem(userId, itemData) {
-    const newItem = {
-      _id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-      ...itemData,
-      isCustom: true,
-      createdBy: userId,
-      createdAt: new Date().toISOString(),
-    };
-    this.data.items.push(newItem);
-    this.saveToFile();
-    return newItem;
+  // Shop & Treasury
+  async getItems() {
+    await this.ensureCatalog();
+    return await Item.find({}).lean();
   }
 
-  buyItem(userId, itemId) {
-    const user = this.findUserById(userId);
-    const item = this.data.items.find((i) => i._id === itemId || i.id === itemId);
-    if (!user || !item) return { success: false, error: 'Item or user not found' };
+  async getItemById(id) {
+    try {
+      return await Item.findById(id).lean();
+    } catch {
+      return await Item.findOne({ _id: id }).lean();
+    }
+  }
+
+  async createItem(itemData) {
+    const item = await Item.create(itemData);
+    return item.toObject ? item.toObject() : item;
+  }
+
+  async buyItem(userId, itemId) {
+    const user = await this.findUserById(userId);
+    if (!user) return { success: false, error: 'User not found' };
+
+    const item = await this.getItemById(itemId);
+    if (!item) return { success: false, error: 'Item not found in shop' };
 
     if (user.gold < item.costGold) {
-      return { success: false, error: 'Insufficient Gold! Complete more quests or focus sessions to earn Gold.' };
+      return { success: false, error: 'Insufficient gold balance' };
     }
 
     const updatedGold = user.gold - item.costGold;
-    const inventory = user.inventory || [];
+    const inventory = Array.isArray(user.inventory) ? [...user.inventory] : [];
     inventory.push({
-      itemId: item._id || item.id,
+      itemId: String(item._id || item.id),
       name: item.name,
       category: item.category,
       icon: item.icon,
@@ -510,84 +466,82 @@ class StorageEngine {
       isConsumed: false,
     });
 
-    const updatedUser = this.updateUser(userId, { gold: updatedGold, inventory });
+    const updatedUser = await this.updateUser(userId, { gold: updatedGold, inventory });
     return { success: true, user: updatedUser, item };
   }
 
   // Achievements
-  getAchievements() {
-    return this.data.achievements;
+  async getAchievements() {
+    await this.ensureCatalog();
+    return await Achievement.find({}).lean();
   }
 
-  getUserAchievements(userId) {
-    return this.data.userAchievements.filter((ua) => ua.userId === userId);
+  async getUserAchievements(userId) {
+    return await UserAchievement.find({ userId }).lean();
   }
 
-  checkUserAchievements(userId) {
-    const user = this.findUserById(userId);
+  async checkUserAchievements(userId) {
+    const user = await this.findUserById(userId);
     if (!user) return [];
 
-    const completedQuests = this.data.quests.filter((q) => q.userId === userId && q.isCompleted).length;
-    const userSessions = this.data.sessions.filter((s) => s.userId === userId);
+    const completedQuests = await Quest.countDocuments({ userId, isCompleted: true });
+    const userSessions = await Session.find({ userId }).lean();
     const totalFocusMinutes = userSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-    const unlockedList = this.getUserAchievements(userId).map((ua) => ua.achievementCode);
+    const unlockedRecords = await this.getUserAchievements(userId);
+    const unlockedList = unlockedRecords.map((ua) => ua.achievementCode);
 
+    const achievements = await this.getAchievements();
     const newlyUnlocked = [];
 
-    this.data.achievements.forEach((ach) => {
-      if (unlockedList.includes(ach.code)) return;
+    for (const ach of achievements) {
+      if (unlockedList.includes(ach.code)) continue;
 
       let satisfied = false;
-      const { type, targetValue } = ach.condition;
+      const { type, targetValue } = ach.condition || {};
 
       if (type === 'quests_completed' && completedQuests >= targetValue) satisfied = true;
       if (type === 'streak_days' && (user.streak || 1) >= targetValue) satisfied = true;
       if (type === 'focus_minutes' && totalFocusMinutes >= targetValue) satisfied = true;
-      if (type === 'level_reached' && user.level >= targetValue) satisfied = true;
-      if (type === 'gold_accumulated' && user.gold >= targetValue) satisfied = true;
+      if (type === 'level_reached' && (user.level || 1) >= targetValue) satisfied = true;
+      if (type === 'gold_accumulated' && (user.gold || 0) >= targetValue) satisfied = true;
 
       if (satisfied) {
-        const unlockRecord = {
-          _id: 'uach_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        await UserAchievement.create({
           userId,
           achievementCode: ach.code,
-          unlockedAt: new Date().toISOString(),
+          unlockedAt: new Date(),
           isClaimed: true,
-        };
-        this.data.userAchievements.push(unlockRecord);
+        });
         newlyUnlocked.push(ach);
       }
-    });
-
-    if (newlyUnlocked.length > 0) {
-      this.saveToFile();
     }
+
     return newlyUnlocked;
   }
 
   // Daily Performance Calculation
-  getDailyPerformance(userId, date = null) {
+  async getDailyPerformance(userId, date = null) {
     const targetDate = date || new Date().toISOString().split('T')[0];
-    const user = this.findUserById(userId);
+    const user = await this.findUserById(userId);
     if (!user) return { score: 100, message: 'Ready for quests' };
 
-    const schedules = this.getSchedules(userId, targetDate);
-    const quests = this.getQuests(userId, { date: targetDate });
-    const sessions = this.getSessions(userId, targetDate);
+    const schedules = await this.getSchedules(userId, targetDate);
+    const quests = await this.getQuests(userId, { date: targetDate });
+    const sessions = await this.getSessions(userId, targetDate);
 
     const totalScheduledMinutes = schedules.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-    const completedScheduledMinutes = schedules.filter((s) => s.isCompleted).reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const completedScheduledMinutes = schedules
+      .filter((s) => s.isCompleted)
+      .reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
     const completedQuests = quests.filter((q) => q.isCompleted).length;
     const totalQuests = quests.length;
     const totalFocusMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
 
-    // Intelligent Zero-Activity Handling
-    // If no schedule or quest was planned yet, do not give 0%. Give 100% (Clean Slate / Ready) or baseline.
     let score = 100;
     if (totalScheduledMinutes > 0 || totalQuests > 0) {
       let scheduleRatio = totalScheduledMinutes > 0 ? (completedScheduledMinutes / totalScheduledMinutes) * 100 : 100;
       let questRatio = totalQuests > 0 ? (completedQuests / totalQuests) * 100 : 100;
-      
+
       if (totalScheduledMinutes > 0 && totalQuests > 0) {
         score = Math.round(scheduleRatio * 0.5 + questRatio * 0.5);
       } else if (totalScheduledMinutes > 0) {
@@ -596,11 +550,10 @@ class StorageEngine {
         score = Math.round(questRatio);
       }
     } else if (totalFocusMinutes > 0) {
-      // User worked without scheduling: 100% active
       score = 100;
     }
 
-    return {
+    const performanceData = {
       date: targetDate,
       score,
       totalScheduledMinutes,
@@ -609,24 +562,32 @@ class StorageEngine {
       totalQuests,
       totalFocusMinutes,
     };
+
+    // Permanently persist performance to MongoDB Atlas so it is immediately visible on next visit
+    try {
+      await this.updateUser(userId, { dailyPerformance: performanceData });
+    } catch {}
+
+    return performanceData;
   }
 
   // Leaderboard
-  getLeaderboard() {
-    return this.data.users
-      .filter((u) => u.settings?.leaderboardVisibility !== false)
-      .map((u) => ({
-        id: u._id || u.id,
-        name: u.name,
-        avatar: u.avatar || '⚔️ Shadow Knight',
-        title: u.title || 'Novice Adventurer',
-        level: u.level || 1,
-        totalXpEarned: u.totalXpEarned || 0,
-        streak: u.streak || 1,
-        gold: u.gold || 0,
-      }))
-      .sort((a, b) => b.totalXpEarned - a.totalXpEarned || b.level - a.level);
+  async getLeaderboard() {
+    const users = await User.find({ 'settings.leaderboardVisibility': { $ne: false } })
+      .sort({ totalXpEarned: -1, level: -1 })
+      .lean();
+
+    return users.map((u) => ({
+      id: String(u._id),
+      name: u.name,
+      avatar: u.avatar || '⚔️ Shadow Knight',
+      title: u.title || 'Novice Adventurer',
+      level: u.level || 1,
+      totalXpEarned: u.totalXpEarned || 0,
+      streak: u.streak || 1,
+      gold: u.gold || 0,
+    }));
   }
 }
 
-export const db = new StorageEngine();
+export const db = new MongoStorageEngine();

@@ -5,11 +5,11 @@ import { requireAuth } from '../middleware/auth.js';
 const router = express.Router();
 
 // GET /api/sessions
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const date = req.query.date || null;
-    const sessions = db.getSessions(userId, date);
+    const sessions = await db.getSessions(userId, date);
     return res.json({ sessions });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch focus sessions.' });
@@ -17,10 +17,9 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/sessions
-// Log completed focus sub-session (e.g. 45-minute sub-session)
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const {
       questId,
       title,
@@ -32,8 +31,6 @@ router.post('/', requireAuth, (req, res) => {
     } = req.body;
 
     const duration = Number(durationMinutes) || 45;
-    
-    // XP Calculation: 1 XP per minute of focus + bonus for completion
     const xpAwarded = Math.round(duration * 1.2);
     const goldAwarded = Math.round(duration * 0.5);
 
@@ -43,7 +40,7 @@ router.post('/', requireAuth, (req, res) => {
     else if (category === 'Chores') attributeBoost = 'discipline';
     else if (category === 'Social') attributeBoost = 'charisma';
 
-    const newSession = db.createSession({
+    const newSession = await db.createSession({
       userId,
       questId: questId || null,
       title: title || 'Deep Focus Session',
@@ -56,8 +53,7 @@ router.post('/', requireAuth, (req, res) => {
       notes: notes || '',
     });
 
-    // Award XP and Gold to user
-    const progressionResult = db.awardXpAndGold(
+    const progressionResult = await db.awardXpAndGold(
       userId,
       xpAwarded,
       goldAwarded,
@@ -65,8 +61,7 @@ router.post('/', requireAuth, (req, res) => {
       1
     );
 
-    // Check newly unlocked achievements
-    const newlyUnlockedAchievements = db.checkUserAchievements(userId);
+    const newlyUnlockedAchievements = await db.checkUserAchievements(userId);
 
     return res.status(201).json({
       message: 'Focus session completed! XP & Gold awarded.',

@@ -6,11 +6,11 @@ import { sendAchievementEmail } from '../utils/emailService.js';
 const router = express.Router();
 
 // GET /api/achievements
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
-    const achievements = db.getAchievements();
-    const userAchievements = db.getUserAchievements(userId);
+    const userId = String(req.user._id || req.user.id);
+    const achievements = await db.getAchievements();
+    const userAchievements = await db.getUserAchievements(userId);
     const unlockedMap = new Set(userAchievements.map((ua) => ua.achievementCode));
 
     const enriched = achievements.map((ach) => ({
@@ -26,13 +26,12 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/achievements/check
-router.post('/check', requireAuth, (req, res) => {
+router.post('/check', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const user = req.user;
-    const newlyUnlocked = db.checkUserAchievements(userId);
+    const newlyUnlocked = await db.checkUserAchievements(userId);
 
-    // Send emails for newly unlocked achievements
     if (newlyUnlocked && newlyUnlocked.length > 0 && user?.email) {
       newlyUnlocked.forEach((ach) => {
         sendAchievementEmail({

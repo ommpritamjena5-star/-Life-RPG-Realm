@@ -13,21 +13,21 @@ import {
 const router = express.Router();
 
 // GET /api/settings
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   return res.json({ settings: req.user.settings || {} });
 });
 
 // PUT /api/settings
-router.put('/', requireAuth, (req, res) => {
+router.put('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const currentSettings = req.user.settings || {};
     const updatedSettings = {
       ...currentSettings,
       ...req.body,
     };
 
-    const updatedUser = db.updateUser(userId, { settings: updatedSettings });
+    const updatedUser = await db.updateUser(userId, { settings: updatedSettings });
     const { password: _, ...userData } = updatedUser;
 
     return res.json({
@@ -41,14 +41,13 @@ router.put('/', requireAuth, (req, res) => {
 });
 
 // POST /api/settings/send-reminder
-// Manually or automatically dispatches quest reminder email to hero
 router.post('/send-reminder', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const user = req.user;
     const today = new Date().toISOString().split('T')[0];
 
-    const allQuests = db.getQuests(userId, { date: today });
+    const allQuests = await db.getQuests(userId, { date: today });
     const pendingQuests = allQuests.filter((q) => !q.isCompleted);
 
     const result = await sendQuestReminderEmail({
@@ -70,7 +69,6 @@ router.post('/send-reminder', requireAuth, async (req, res) => {
 });
 
 // POST /api/settings/test-email
-// Dispatches any test email template for live verification
 router.post('/test-email', requireAuth, async (req, res) => {
   try {
     const user = req.user;
@@ -103,7 +101,7 @@ router.post('/test-email', requireAuth, async (req, res) => {
         break;
       case 'reminder':
         const today = new Date().toISOString().split('T')[0];
-        const quests = db.getQuests(user._id || user.id, { date: today });
+        const quests = await db.getQuests(String(user._id || user.id), { date: today });
         result = await sendQuestReminderEmail({
           to: targetEmail,
           name: user.name,
@@ -150,16 +148,15 @@ router.post('/test-email', requireAuth, async (req, res) => {
 });
 
 // GET /api/settings/daily-report
-// Generates stylized Accountability Report card to share with favorite contact
-router.get('/daily-report', requireAuth, (req, res) => {
+router.get('/daily-report', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const user = req.user;
     const date = req.query.date || new Date().toISOString().split('T')[0];
 
-    const performance = db.getDailyPerformance(userId, date);
-    const quests = db.getQuests(userId, { date });
-    const sessions = db.getSessions(userId, date);
+    const performance = await db.getDailyPerformance(userId, date);
+    const quests = await db.getQuests(userId, { date });
+    const sessions = await db.getSessions(userId, date);
 
     const completedQuests = quests.filter((q) => q.isCompleted);
     const totalFocusMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);

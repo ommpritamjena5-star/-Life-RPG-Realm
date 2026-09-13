@@ -10,26 +10,33 @@ export const AuthProvider = ({ children }) => {
   const [levelUpData, setLevelUpData] = useState(null);
 
   useEffect(() => {
-    if (token) {
-      fetchUser();
+    const savedToken = localStorage.getItem('liferpg_token') || token;
+    if (savedToken) {
+      fetchUser(savedToken);
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = async (authToken = token) => {
+    if (!authToken) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
-        if (data.user.settings) {
-          sound.setEnabled(data.user.settings.soundEnabled !== false);
-          sound.setVolume(data.user.settings.soundVolume || 70);
+        if (data.user) {
+          setUser(data.user);
+          if (data.user.settings) {
+            sound.setEnabled(data.user.settings.soundEnabled !== false);
+            sound.setVolume(data.user.settings.soundVolume || 70);
+          }
         }
-      } else {
+      } else if (res.status === 401) {
         logout();
       }
     } catch (e) {
@@ -48,9 +55,18 @@ export const AuthProvider = ({ children }) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Login failed');
 
-    setToken(data.token);
-    setUser(data.user);
-    localStorage.setItem('liferpg_token', data.token);
+    if (data.token) {
+      localStorage.setItem('liferpg_token', data.token);
+      setToken(data.token);
+    }
+    if (data.user) {
+      setUser(data.user);
+      if (data.user.settings) {
+        sound.setEnabled(data.user.settings.soundEnabled !== false);
+        sound.setVolume(data.user.settings.soundVolume || 70);
+      }
+    }
+    setLoading(false);
     return data.user;
   };
 
@@ -70,9 +86,14 @@ export const AuthProvider = ({ children }) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-    setToken(data.token);
-    setUser(data.user);
-    localStorage.setItem('liferpg_token', data.token);
+    if (data.token) {
+      localStorage.setItem('liferpg_token', data.token);
+      setToken(data.token);
+    }
+    if (data.user) {
+      setUser(data.user);
+    }
+    setLoading(false);
     return data.user;
   };
 

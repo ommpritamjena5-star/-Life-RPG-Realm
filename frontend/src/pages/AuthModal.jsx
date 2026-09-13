@@ -425,20 +425,32 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
                     </>
                   )}
 
-                  {/* Email Field */}
+                  {/* Email / Identifier Field */}
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-300 mb-0.5 flex items-center justify-between">
-                      <span>Email Realm Address</span>
+                      <span>
+                        {mode === 'login'
+                          ? 'Email, Mobile Number, or Hero Name'
+                          : mode === 'forgot'
+                          ? 'Registered Email or Hero Name'
+                          : 'Email Realm Address'}
+                      </span>
                       <span className="text-[10px] text-amber-400 font-bold">* Required</span>
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-purple-400 absolute left-3 top-2.5" />
                       <input
-                        type="email"
+                        type={mode === 'register' ? 'email' : 'text'}
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="hero@liferpg.io"
+                        placeholder={
+                          mode === 'login'
+                            ? 'e.g. hero@gmail.com, 9876543210, or GK'
+                            : mode === 'forgot'
+                            ? 'e.g. hero@gmail.com or GK'
+                            : 'hero@gmail.com'
+                        }
                         className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                       />
                     </div>

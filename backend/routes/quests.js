@@ -5,12 +5,11 @@ import { requireAuth } from '../middleware/auth.js';
 const router = express.Router();
 
 // GET /api/quests
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
-    // Automatically evaluate overdue tasks & inactivity penalties
-    const autoPenalties = db.checkAndApplySlothPenalties(userId);
-    const quests = db.getQuests(userId, req.query);
+    const userId = String(req.user._id || req.user.id);
+    const autoPenalties = await db.checkAndApplySlothPenalties(userId);
+    const quests = await db.getQuests(userId, req.query);
     return res.json({ quests, autoPenalties: autoPenalties || [] });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch quests.' });
@@ -18,9 +17,9 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/quests
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = String(req.user._id || req.user.id);
     const {
       title,
       description,
@@ -41,7 +40,6 @@ router.post('/', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Quest title is required.' });
     }
 
-    // Determine rewards & attribute boost based on difficulty and category
     let xpReward = 50;
     let goldReward = 20;
     let attributePoints = 2;
@@ -94,7 +92,7 @@ router.post('/', requireAuth, (req, res) => {
         attributeBoost = 'agility';
     }
 
-    const newQuest = db.createQuest({
+    const newQuest = await db.createQuest({
       userId,
       title: title.trim(),
       description: description || '',
@@ -132,17 +130,17 @@ router.post('/', requireAuth, (req, res) => {
 });
 
 // PUT /api/quests/:id
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const quest = db.getQuestById(req.params.id);
+    const quest = await db.getQuestById(req.params.id);
     if (!quest) return res.status(404).json({ error: 'Quest not found.' });
 
-    const userId = req.user._id || req.user.id;
-    if (quest.userId !== userId) {
+    const userId = String(req.user._id || req.user.id);
+    if (String(quest.userId) !== userId) {
       return res.status(403).json({ error: 'Unauthorized to modify this quest.' });
     }
 
-    const updated = db.updateQuest(req.params.id, req.body);
+    const updated = await db.updateQuest(req.params.id, req.body);
     return res.json({ quest: updated });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to update quest.' });
@@ -150,44 +148,39 @@ router.put('/:id', requireAuth, (req, res) => {
 });
 
 // POST /api/quests/:id/complete
-router.post('/:id/complete', requireAuth, (req, res) => {
+router.post('/:id/complete', requireAuth, async (req, res) => {
   try {
-    const quest = db.getQuestById(req.params.id);
+    const quest = await db.getQuestById(req.params.id);
     if (!quest) return res.status(404).json({ error: 'Quest not found.' });
 
-    const userId = req.user._id || req.user.id;
-    if (quest.userId !== userId) {
+    const userId = String(req.user._id || req.user.id);
+    if (String(quest.userId) !== userId) {
       return res.status(403).json({ error: 'Unauthorized to complete this quest.' });
     }
 
-    // Prevent duplicate completion
     if (quest.isCompleted) {
       return res.status(400).json({ error: 'Quest has already been completed!' });
     }
 
-    // Mark quest completed
-    const updatedQuest = db.updateQuest(quest._id || quest.id, {
+    const updatedQuest = await db.updateQuest(quest._id || quest.id, {
       isCompleted: true,
       status: 'completed',
       completedAt: new Date().toISOString(),
     });
 
-    // Check for active consumable potion buffs in inventory (e.g. +20% XP)
     let xpGain = quest.xpReward || 50;
     let goldGain = quest.goldReward || 20;
 
-    const user = db.findUserById(userId);
+    const user = await db.findUserById(userId);
     const potion = user.inventory?.find((i) => i.effects?.xpBonusPercent && !i.isConsumed);
     if (potion) {
       const bonus = Math.round(xpGain * (potion.effects.xpBonusPercent / 100));
       xpGain += bonus;
-      // Mark potion consumed
       potion.isConsumed = true;
-      db.updateUser(userId, { inventory: user.inventory });
+      await db.updateUser(userId, { inventory: user.inventory });
     }
 
-    // Award XP, Gold, Level progression, Streak update
-    const progressionResult = db.awardXpAndGold(
+    const progressionResult = await db.awardXpAndGold(
       userId,
       xpGain,
       goldGain,
@@ -195,15 +188,13 @@ router.post('/:id/complete', requireAuth, (req, res) => {
       quest.attributePoints || 2
     );
 
-    // Also update linked schedule if exists
-    const schedules = db.getSchedules(userId, quest.scheduledDate);
-    const linkedSchedule = schedules.find((s) => s.questId === (quest._id || quest.id));
+    const schedules = await db.getSchedules(userId, quest.scheduledDate);
+    const linkedSchedule = schedules.find((s) => String(s.questId) === String(quest._id || quest.id));
     if (linkedSchedule) {
-      db.updateSchedule(linkedSchedule._id || linkedSchedule.id, { isCompleted: true });
+      await db.updateSchedule(linkedSchedule._id || linkedSchedule.id, { isCompleted: true });
     }
 
-    // Check newly unlocked achievements
-    const newlyUnlockedAchievements = db.checkUserAchievements(userId);
+    const newlyUnlockedAchievements = await db.checkUserAchievements(userId);
 
     return res.json({
       message: 'Quest completed! Rewards granted.',
@@ -217,14 +208,14 @@ router.post('/:id/complete', requireAuth, (req, res) => {
   }
 });
 
-// POST /api/quests/:id/skip (Sloth & Abandonment Penalty)
-router.post('/:id/skip', requireAuth, (req, res) => {
+// POST /api/quests/:id/skip
+router.post('/:id/skip', requireAuth, async (req, res) => {
   try {
-    const quest = db.getQuestById(req.params.id);
+    const quest = await db.getQuestById(req.params.id);
     if (!quest) return res.status(404).json({ error: 'Quest not found.' });
 
-    const userId = req.user._id || req.user.id;
-    if (quest.userId !== userId) {
+    const userId = String(req.user._id || req.user.id);
+    if (String(quest.userId) !== userId) {
       return res.status(403).json({ error: 'Unauthorized to abandon this quest.' });
     }
 
@@ -232,7 +223,6 @@ router.post('/:id/skip', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Completed quests cannot be skipped.' });
     }
 
-    // Determine penalty based on quest difficulty
     let xpLoss = 35;
     let goldLoss = 15;
     switch (quest.difficulty) {
@@ -257,15 +247,13 @@ router.post('/:id/skip', requireAuth, (req, res) => {
         goldLoss = 15;
     }
 
-    // Mark quest as failed/skipped
-    const updatedQuest = db.updateQuest(quest._id || quest.id, {
+    const updatedQuest = await db.updateQuest(quest._id || quest.id, {
       status: 'failed',
       failedAt: new Date().toISOString(),
       penaltyApplied: true,
     });
 
-    // Execute penalty deduction
-    const penaltyResult = db.deductXpAndPenalize(
+    const penaltyResult = await db.deductXpAndPenalize(
       userId,
       xpLoss,
       goldLoss,
@@ -274,7 +262,7 @@ router.post('/:id/skip', requireAuth, (req, res) => {
     );
 
     return res.json({
-      message: `Quest skipped. Sloth Penalty: -${xpLoss} XP, -${goldLoss} Gold${penaltyResult.shieldUsed ? ' (Streak Protected by Aegis Shield!)' : ', Streak reduced by 1.'}`,
+      message: `Quest skipped. Sloth Penalty: -${xpLoss} XP, -${goldLoss} Gold${penaltyResult?.shieldUsed ? ' (Streak Protected by Aegis Shield!)' : ', Streak reduced by 1.'}`,
       quest: updatedQuest,
       penaltyResult,
     });
@@ -285,17 +273,17 @@ router.post('/:id/skip', requireAuth, (req, res) => {
 });
 
 // DELETE /api/quests/:id
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const quest = db.getQuestById(req.params.id);
+    const quest = await db.getQuestById(req.params.id);
     if (!quest) return res.status(404).json({ error: 'Quest not found.' });
 
-    const userId = req.user._id || req.user.id;
-    if (quest.userId !== userId) {
+    const userId = String(req.user._id || req.user.id);
+    if (String(quest.userId) !== userId) {
       return res.status(403).json({ error: 'Unauthorized to delete this quest.' });
     }
 
-    db.deleteQuest(req.params.id);
+    await db.deleteQuest(req.params.id);
     return res.json({ message: 'Quest banished successfully.' });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to delete quest.' });

@@ -101,19 +101,28 @@ export const OnboardingModal = ({ isOpen, onComplete }) => {
                 </span>
               </div>
             </div>
-            <div className="flex gap-1.5">
-              {[1, 2, 3, 4].map((s) => (
-                <div
-                  key={s}
-                  className={`h-1.5 rounded-full transition-all ${
-                    s === step
-                      ? 'w-6 bg-amber-400'
-                      : s < step
-                      ? 'w-3 bg-cyan-500'
-                      : 'w-3 bg-slate-800'
-                  }`}
-                />
-              ))}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4].map((s) => (
+                  <div
+                    key={s}
+                    className={`h-1.5 rounded-full transition-all ${
+                      s === step
+                        ? 'w-6 bg-amber-400'
+                        : s < step
+                        ? 'w-3 bg-cyan-500'
+                        : 'w-3 bg-slate-800'
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={handleFinish}
+                className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] font-semibold text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+              >
+                Skip ➔
+              </button>
             </div>
           </div>
 
