@@ -174,23 +174,29 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
       {/* Floating Oracle Orb Trigger Button */}
       <div className="fixed bottom-20 xl:bottom-6 right-4 sm:right-6 z-40">
         <motion.button
-          whileHover={{ scale: 1.08 }}
+          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.94 }}
           onClick={() => {
             sound.playClick();
             setIsOpen(!isOpen);
           }}
-          className="relative p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-600 text-white shadow-2xl shadow-purple-500/40 border border-amber-300/40 cursor-pointer flex items-center justify-center group"
+          className="relative p-2.5 rounded-3xl bg-gradient-to-br from-cyan-400 via-blue-600 to-purple-600 text-white shadow-2xl shadow-cyan-500/50 border-2 border-cyan-300/60 cursor-pointer flex items-center justify-center group"
           title="Oracle AI Companion • Get Game Guidance"
         >
           {isOpen ? (
-            <X className="w-6 h-6 text-slate-950" />
+            <div className="w-13 h-13 flex items-center justify-center">
+              <X className="w-7 h-7 text-white" />
+            </div>
           ) : (
-            <>
-              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full animate-ping" />
-              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full border-2 border-slate-950" />
-              <Bot className="w-6 h-6 text-slate-950 group-hover:rotate-12 transition-transform" />
-            </>
+            <div className="relative w-13 h-13">
+              <div className="absolute -top-1 -right-1 z-10 w-4 h-4 bg-cyan-400 rounded-full animate-ping" />
+              <div className="absolute -top-1 -right-1 z-10 w-4 h-4 bg-cyan-400 rounded-full border-2 border-slate-950" />
+              <img
+                src="/logo.png"
+                alt="Oracle Logo"
+                className="w-full h-full object-cover rounded-[18px] bg-slate-950 group-hover:rotate-6 transition-transform"
+              />
+            </div>
           )}
         </motion.button>
       </div>
@@ -207,20 +213,22 @@ Ask me anything about **XP formulas**, **Dynamic Archetypes (Warrior, Mage, Rogu
           >
             {/* Header */}
             <div className="p-3.5 sm:p-4 bg-gradient-to-r from-purple-950/80 via-slate-900 to-indigo-950/80 border-b border-purple-500/30 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-purple-600 p-[1px] shadow-md shadow-purple-500/30">
-                  <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center text-xl">
-                    🧙
-                  </div>
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 p-[2px] shadow-md shadow-cyan-500/40 overflow-hidden flex-shrink-0">
+                  <img
+                    src="/logo.png"
+                    alt="Oracle Aura"
+                    className="w-full h-full object-cover rounded-[14px] bg-slate-950"
+                  />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="font-rpg font-black text-sm text-slate-100 uppercase tracking-wide">
                       Aura Oracle
                     </h3>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                   </div>
-                  <span className="text-[10px] text-purple-300 font-bold uppercase tracking-wider">
+                  <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">
                     AI Game Master & Guide
                   </span>
                 </div>

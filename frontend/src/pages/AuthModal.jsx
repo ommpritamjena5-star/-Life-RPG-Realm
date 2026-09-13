@@ -246,6 +246,17 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'register', onComplet
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
               <div>
+                <div className="flex items-center gap-3.5 mb-3.5">
+                  <img src="/logo.png" alt="Life RPG Crest" className="w-12 h-12 rounded-2xl border-2 border-cyan-400/60 shadow-lg shadow-cyan-500/40 object-cover" />
+                  <div>
+                    <span className="font-rpg font-black text-sm text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-amber-300 tracking-wider">
+                      LIFE RPG
+                    </span>
+                    <span className="block text-[9px] text-cyan-400 font-bold uppercase tracking-widest leading-none mt-0.5">
+                      Awakening Portal
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-rpg font-bold tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-400/40 text-purple-300">
                     ✨ 3D Humanoid Hero Model

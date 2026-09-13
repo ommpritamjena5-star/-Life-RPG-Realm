@@ -172,17 +172,19 @@ export const LandingPage = ({ onStartJourney, onLogin }) => {
 
       {/* Header / Nav */}
       <header className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-600 p-[1px] shadow-lg shadow-purple-500/30">
-            <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center text-2xl">
-              ⚔️
-            </div>
+        <div className="flex items-center gap-3.5">
+          <div className="w-14 sm:w-16 h-14 sm:h-16 rounded-3xl bg-gradient-to-br from-cyan-400 via-blue-600 to-purple-600 p-[2px] shadow-xl shadow-cyan-500/40 overflow-hidden hover:scale-105 transition-transform">
+            <img
+              src="/logo.png"
+              alt="Life RPG Crest"
+              className="w-full h-full object-cover rounded-[22px] bg-slate-950"
+            />
           </div>
           <div>
-            <span className="font-rpg font-black text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-purple-200 to-cyan-300">
+            <span className="font-rpg font-black text-2xl sm:text-3xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-purple-200 to-amber-300">
               LIFE RPG
             </span>
-            <span className="block text-[10px] text-purple-400 font-bold uppercase tracking-widest">
+            <span className="block text-[11px] text-cyan-400 font-extrabold uppercase tracking-widest leading-none mt-0.5">
               Gamified Life OS
             </span>
           </div>
@@ -453,8 +455,14 @@ export const LandingPage = ({ onStartJourney, onLogin }) => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-purple-500/10 py-8 text-center text-xs text-slate-500">
-        <p>© 2026 Life RPG. Turn your ambitions into legendary achievements.</p>
+      <footer className="relative z-10 border-t border-purple-500/20 py-10 text-center text-xs text-slate-500 bg-[#06070c]/90 backdrop-blur-md">
+        <div className="flex flex-col items-center justify-center gap-3.5 max-w-7xl mx-auto px-4">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Life RPG" className="w-10 h-10 rounded-2xl border border-cyan-400/60 shadow-md shadow-cyan-500/30 object-cover" />
+            <span className="font-rpg font-extrabold text-base tracking-wider text-slate-200">LIFE RPG</span>
+          </div>
+          <p className="text-slate-400">© 2026 Life RPG. Turn your ambitions into legendary achievements.</p>
+        </div>
       </footer>
     </div>
   );

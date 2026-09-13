@@ -1,26 +1,44 @@
 # Dependencies
 node_modules/
+*/node_modules/
 .pnp
 .pnp.js
 
 # Production build
 dist/
+*/dist/
 build/
+*/build/
 
-# Logs
+# Logs & System artifacts
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .system_generated/
+.gemini/
 
-# Environment
+# Environment and Secret Configuration
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+*.env
+**/.env
+**/.env.*
+!*.env.example
+!.env.example
 
-# IDE
+# Local Database & Seed Files with User Credentials
+backend/data/db.json
+*/data/db.json
+*.local.json
+
+# Diagnostic & Scratch Test Scripts
+backend/checkGmail.js
+backend/testLiveDispatch.js
+backend/testEmail*.js
+scratch/
+
+# IDE & Editor Files
 .vscode/
 .idea/
 .DS_Store
@@ -29,3 +47,4 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+

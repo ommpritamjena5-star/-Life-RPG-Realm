@@ -54,7 +54,7 @@ export const Navbar = ({ activeTab, setActiveTab, onOpenReport }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-purple-500/25 bg-[#07080e]/95 backdrop-blur-2xl shadow-xl shadow-black/60">
       <div className="max-w-[1700px] mx-auto px-3 sm:px-5 lg:px-6">
-        <div className="flex items-center justify-between h-16 gap-2 lg:gap-4">
+        <div className="flex items-center justify-between h-18 gap-2 lg:gap-4">
           
           {/* Brand Logo */}
           <div
@@ -62,19 +62,21 @@ export const Navbar = ({ activeTab, setActiveTab, onOpenReport }) => {
               sound.playClick();
               setActiveTab('dashboard');
             }}
-            className="flex items-center gap-2.5 cursor-pointer group flex-shrink-0 select-none"
+            className="flex items-center gap-3 cursor-pointer group flex-shrink-0 select-none py-1"
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-600 p-[1px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center text-xl">
-                ⚔️
-              </div>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-purple-600 p-[2px] shadow-lg shadow-cyan-500/30 group-hover:scale-108 transition-all overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="Life RPG Logo"
+                className="w-full h-full object-cover rounded-[14px] bg-slate-950"
+              />
             </div>
             <div className="hidden sm:block">
-              <span className="font-rpg font-black text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-purple-200 to-cyan-300 drop-shadow-sm">
+              <span className="font-rpg font-black text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-purple-200 to-amber-300 drop-shadow-sm">
                 LIFE RPG
               </span>
-              <span className="block text-[9px] text-purple-400 font-bold uppercase tracking-widest leading-none">
-                Life OS
+              <span className="block text-[10px] text-cyan-400 font-bold uppercase tracking-widest leading-none mt-0.5">
+                Hero Operating System
               </span>
             </div>
           </div>

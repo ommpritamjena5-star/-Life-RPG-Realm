@@ -88,11 +88,19 @@ export const OnboardingModal = ({ isOpen, onComplete }) => {
           exit={{ scale: 0.9, opacity: 0 }}
           className="relative max-w-lg w-full rpg-panel-glow rounded-3xl p-6 sm:p-8 border border-purple-500/40 shadow-2xl overflow-hidden"
         >
-          {/* Top Progress Indicator */}
-          <div className="flex items-center justify-between mb-6">
-            <span className="text-xs font-bold text-purple-400 font-rpg uppercase tracking-widest">
-              HERO AWAKENING • STEP {step} OF {totalSteps}
-            </span>
+          {/* Top Progress Indicator & Brand */}
+          <div className="flex items-center justify-between mb-6 pb-3.5 border-b border-purple-500/20">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Life RPG Crest" className="w-11 h-11 rounded-2xl border-2 border-cyan-400/60 shadow-md shadow-cyan-500/30 object-cover" />
+              <div>
+                <span className="text-xs font-bold text-cyan-300 font-rpg uppercase tracking-widest block">
+                  HERO AWAKENING
+                </span>
+                <span className="text-[10px] text-amber-400 font-bold tracking-wider">
+                  Step {step} of {totalSteps}
+                </span>
+              </div>
+            </div>
             <div className="flex gap-1.5">
               {[1, 2, 3, 4].map((s) => (
                 <div
@@ -101,7 +109,7 @@ export const OnboardingModal = ({ isOpen, onComplete }) => {
                     s === step
                       ? 'w-6 bg-amber-400'
                       : s < step
-                      ? 'w-3 bg-purple-500'
+                      ? 'w-3 bg-cyan-500'
                       : 'w-3 bg-slate-800'
                   }`}
                 />

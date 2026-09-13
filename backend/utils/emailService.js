@@ -12,14 +12,14 @@ dotenv.config();
 
 // Create transporter with environment config or fallback test transport
 const getTransporter = () => {
-  const emailUser = process.env.EMAIL_USER?.trim() || 'rpg000life@gmail.com';
-  const emailPass = (process.env.EMAIL_PASS || 'kdmwbehtcehlzedr').replace(/\s+/g, '');
+  const emailUser = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : null;
+  const emailPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : null;
 
   if (emailUser && emailPass) {
     return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: Number(process.env.EMAIL_PORT) || 465,
+      secure: process.env.EMAIL_SECURE !== 'false',
       auth: {
         user: emailUser,
         pass: emailPass,
@@ -55,13 +55,16 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
     <tr>
       <td align="center">
         <table role="presentation" width="100%" style="max-width: 600px; background-color: #0d0f1a; border: 1px solid #2e1065; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);">
-          <!-- Header Banner -->
+          <!-- Header Banner with Official Crest Logo -->
           <tr>
-            <td style="background: linear-gradient(135deg, #1e1b4b 0%, #3b0764 50%, #0f172a 100%); padding: 30px 25px; text-align: center; border-bottom: 2px solid #f59e0b;">
-              <div style="display: inline-block; background: #07080e; padding: 10px 16px; border-radius: 14px; border: 1px solid #f59e0b; margin-bottom: 12px; box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);">
-                <span style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #f59e0b; text-transform: uppercase;">⚔️ LIFE RPG</span>
+            <td style="background: linear-gradient(135deg, #091326 0%, #1e1b4b 50%, #030712 100%); padding: 36px 25px; text-align: center; border-bottom: 2px solid #38bdf8;">
+              <div style="text-align: center; margin-bottom: 16px;">
+                <img src="cid:liferpg-logo" width="110" height="110" alt="Life RPG Crest" style="width: 110px; height: 110px; border-radius: 50%; border: 4px solid #38bdf8; box-shadow: 0 0 30px rgba(56, 189, 248, 0.7); display: inline-block; vertical-align: middle;" />
               </div>
-              <p style="margin: 0; color: #c084fc; font-size: 12px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase;">
+              <div style="display: inline-block; background: #07080e; padding: 10px 22px; border-radius: 14px; border: 1.5px solid #38bdf8; margin-bottom: 10px; box-shadow: 0 0 24px rgba(56, 189, 248, 0.35);">
+                <span style="font-size: 24px; font-weight: 900; letter-spacing: 3px; color: #38bdf8; text-transform: uppercase;">LIFE RPG</span>
+              </div>
+              <p style="margin: 0; color: #c084fc; font-size: 13px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase;">
                 Hero Operating System & Quest Realm
               </p>
             </td>
@@ -74,9 +77,12 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer with Logo Badge -->
           <tr>
             <td style="background-color: #07080e; padding: 25px 30px; text-align: center; border-top: 1px solid rgba(168, 85, 247, 0.2); color: #64748b; font-size: 11px;">
+              <div style="text-align: center; margin-bottom: 12px;">
+                <img src="cid:liferpg-logo" width="40" height="40" alt="Life RPG" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #38bdf8; display: inline-block; vertical-align: middle;" />
+              </div>
               <p style="margin: 0 0 8px 0; color: #94a3b8;">
                 Master your real-world habits • Level up your life • Forge your legend
               </p>
@@ -96,15 +102,27 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
 /**
  * Universal Mail Dispatcher with Console Mock Fallback
  */
-export const dispatchEmail = async ({ to, subject, html, text, preheader }) => {
-  const from = process.env.EMAIL_FROM || '"Life RPG Realm" <rpg000life@gmail.com>';
+export const dispatchEmail = async ({ to, subject, html, text, preheader, attachments = [] }) => {
+  const from = process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `"Life RPG Realm" <${process.env.EMAIL_USER}>` : '"Life RPG Realm" <noreply@liferpg.io>');
   const fullHtml = wrapInTemplate({ title: subject, preheader, contentHtml: html });
   const transporter = getTransporter();
+
+  // Attach logo automatically for inline CID rendering
+  const logoPath = path.join(__dirname, '../public/logo.png');
+  const mailAttachments = [
+    {
+      filename: 'logo.png',
+      path: logoPath,
+      cid: 'liferpg-logo',
+    },
+    ...attachments,
+  ];
 
   console.log(`\n================== 📧 [ASTRAL EMAIL DISPATCH] ==================`);
   console.log(`To: ${to}`);
   console.log(`Subject: ${subject}`);
   console.log(`From: ${from}`);
+  console.log(`Logo Attachment: ${logoPath}`);
   console.log(`Time: ${new Date().toISOString()}`);
 
   if (transporter) {
@@ -115,6 +133,7 @@ export const dispatchEmail = async ({ to, subject, html, text, preheader }) => {
         subject,
         text: text || preheader || subject,
         html: fullHtml,
+        attachments: mailAttachments,
       });
       console.log(`✅ [Email Service] Real SMTP mail sent successfully! MessageId: ${info.messageId}`);
       console.log(`================================================================\n`);
