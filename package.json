@@ -2,6 +2,7 @@
   "name": "life-rpg",
   "version": "1.0.0",
   "description": "Life RPG - Turn Your Real Life Into an RPG Personal Operating System",
+  "type": "module",
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"magenta,cyan\" \"npm run backend\" \"npm run frontend\"",
     "backend": "cd backend && npm run dev",
@@ -28,7 +29,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
-    "nodemailer": "^10.0.9"
+    "nodemailer": "^6.9.16"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

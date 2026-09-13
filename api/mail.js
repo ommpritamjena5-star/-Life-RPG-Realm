@@ -1,15 +1,11 @@
 import nodemailer from 'nodemailer';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Create transporter strictly from VERCEL environment variables
+// Create transporter from Vercel environment variables
 const getTransporter = () => {
-  const emailUser = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : null;
-  const emailPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : null;
+  const emailUser = (process.env.EMAIL_USER || '').trim();
+  const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
 
   if (emailUser && emailPass) {
     return nodemailer.createTransport({
@@ -96,37 +92,73 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
 `;
 
 export default async function handler(req, res) {
-  // CORS Headers for secure communication with Render backend
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-mail-secret');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // Allow GET for simple health check
+  if (req.method === 'GET') {
+    const emailUser = (process.env.EMAIL_USER || '').trim();
+    return res.status(200).json({
+      status: 'online',
+      service: 'Life RPG Vercel Serverless Mailer',
+      configured: Boolean(emailUser && process.env.EMAIL_PASS),
+      user: emailUser ? `${emailUser.slice(0, 3)}***@${emailUser.split('@')[1] || ''}` : 'not-configured',
+    });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
   }
 
-  const { to, subject, html, text, preheader } = req.body || {};
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      // use raw
+    }
+  }
+
+  const { to, subject, html, text, preheader } = body || {};
 
   if (!to || !subject || !html) {
-    return res.status(400).json({ error: 'Missing required email fields (to, subject, html)' });
+    return res.status(400).json({
+      error: 'Missing required email fields (to, subject, html)',
+      received: { to, subject, hasHtml: Boolean(html) },
+    });
   }
 
   const transporter = getTransporter();
   const from = process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `"Life RPG Realm" <${process.env.EMAIL_USER}>` : '"Life RPG Realm" <noreply@liferpg.io>');
   const fullHtml = wrapInTemplate({ title: subject, preheader, contentHtml: html });
 
-  // Locate logo file in public or assets
-  let logoPath = path.join(process.cwd(), 'backend/public/logo.png');
-  if (!fs.existsSync(logoPath)) {
-    logoPath = path.join(process.cwd(), 'frontend/public/logo.png');
+  // Locate logo file safely
+  const possibleLogoPaths = [
+    path.join(process.cwd(), 'backend/public/logo.png'),
+    path.join(process.cwd(), 'frontend/public/logo.png'),
+    path.join(process.cwd(), 'public/logo.png'),
+  ];
+
+  let logoBuffer = null;
+  for (const p of possibleLogoPaths) {
+    if (fs.existsSync(p)) {
+      try {
+        logoBuffer = fs.readFileSync(p);
+        break;
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 
-  const mailAttachments = fs.existsSync(logoPath)
-    ? [{ filename: 'logo.png', path: logoPath, cid: 'liferpg-logo' }]
+  const mailAttachments = logoBuffer
+    ? [{ filename: 'logo.png', content: logoBuffer, cid: 'liferpg-logo' }]
     : [];
 
   console.log(`[Vercel Serverless Mailer] Dispatching email to: ${to}, Subject: ${subject}`);
@@ -150,9 +182,10 @@ export default async function handler(req, res) {
         provider: 'Vercel Serverless SMTP',
       });
     } catch (err) {
-      console.error(`[Vercel Serverless Mailer] ❌ Failed:`, err);
+      console.error(`[Vercel Serverless Mailer] ❌ SMTP Error:`, err.message);
       return res.status(500).json({
         success: false,
+        delivered: false,
         error: err.message,
       });
     }
