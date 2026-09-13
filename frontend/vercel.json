@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
+      "source": "/api/mail",
+      "destination": "/api/mail"
+    },
+    {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "https://life-rpg-realm.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",

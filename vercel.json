@@ -11,10 +11,6 @@
     {
       "src": "api/mail.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -24,7 +20,7 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "dest": "https://life-rpg-realm.onrender.com/api/$1"
     },
     {
       "src": "/assets/(.*)",
