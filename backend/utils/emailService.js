@@ -105,6 +105,34 @@ const wrapInTemplate = ({ title, preheader, contentHtml }) => `
 export const dispatchEmail = async ({ to, subject, html, text, preheader, attachments = [] }) => {
   const from = process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `"Life RPG Realm" <${process.env.EMAIL_USER}>` : '"Life RPG Realm" <noreply@liferpg.io>');
   const fullHtml = wrapInTemplate({ title: subject, preheader, contentHtml: html });
+  const vercelMailUrl = process.env.VERCEL_MAIL_URL;
+
+  console.log(`\n================== 📧 [ASTRAL EMAIL DISPATCH] ==================`);
+  console.log(`To: ${to}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`From: ${from}`);
+  console.log(`Time: ${new Date().toISOString()}`);
+
+  // 1. If VERCEL_MAIL_URL is configured, delegate mail dispatching directly to Vercel Serverless
+  if (vercelMailUrl) {
+    try {
+      console.log(`[Email Service] 🚀 Forwarding email to Vercel Serverless Mailer: ${vercelMailUrl}`);
+      const response = await fetch(vercelMailUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, html, text, preheader }),
+      });
+
+      const data = await response.json();
+      console.log(`[Email Service] ✅ Vercel Serverless response:`, data);
+      console.log(`================================================================\n`);
+      return { success: true, delivered: data.delivered, provider: 'Vercel Serverless' };
+    } catch (err) {
+      console.error(`[Email Service] ⚠️ Vercel Mail dispatch failed (${err.message}). Trying fallback transport...`);
+    }
+  }
+
+  // 2. Direct SMTP transport (local or configured)
   const transporter = getTransporter();
 
   // Attach logo automatically for inline CID rendering
@@ -117,13 +145,6 @@ export const dispatchEmail = async ({ to, subject, html, text, preheader, attach
     },
     ...attachments,
   ];
-
-  console.log(`\n================== 📧 [ASTRAL EMAIL DISPATCH] ==================`);
-  console.log(`To: ${to}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`From: ${from}`);
-  console.log(`Logo Attachment: ${logoPath}`);
-  console.log(`Time: ${new Date().toISOString()}`);
 
   if (transporter) {
     try {

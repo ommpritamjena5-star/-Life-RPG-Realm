@@ -9,11 +9,19 @@
       }
     },
     {
+      "src": "api/mail.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/api/mail",
+      "dest": "/api/mail.js"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/api/index.js"
