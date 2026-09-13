@@ -1,38 +1,18 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "npm --prefix frontend install && npm --prefix frontend run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "source": "/api/mail",
+      "destination": "/api/mail"
     },
     {
-      "src": "api/mail.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/mail",
-      "dest": "/api/mail.js"
+      "source": "/api/(.*)",
+      "destination": "https://life-rpg-realm.onrender.com/api/$1"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "https://life-rpg-realm.onrender.com/api/$1"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/dist/assets/$1"
-    },
-    {
-      "src": "/logo.png",
-      "dest": "/frontend/dist/logo.png"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -9,7 +9,7 @@
     "server": "npm run backend",
     "client": "npm run frontend",
     "start": "cd backend && npm start",
-    "build": "cd frontend && npm run build",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
   "keywords": [
