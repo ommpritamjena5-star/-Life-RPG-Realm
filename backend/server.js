@@ -60,7 +60,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error occurred.', details: err.message });
 });
 
-// Start Server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`⚔️ Life RPG Server running on port ${PORT} (http://localhost:${PORT} / http://127.0.0.1:${PORT})`);
-});
+// Export for Vercel Serverless
+export default app;
+
+// Start Server locally or on standalone host
+if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`⚔️ Life RPG Server running on port ${PORT} (http://localhost:${PORT} / http://127.0.0.1:${PORT})`);
+  });
+}
